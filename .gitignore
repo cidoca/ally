@@ -11,6 +11,11 @@ test-cpu
 # Temporary files
 *.swp
 
+# Others
+*.py
+*.s
+*.bin
+
 # Folders
 docs
 roms

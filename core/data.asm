@@ -28,10 +28,9 @@ rX      RESB 1
 rY      RESB 1
 rS      RESB 1
 
-GLOBAL flagN, flagV, flagB, flagD, flagI, flagZ, flagC
+GLOBAL flagN, flagV, flagD, flagI, flagZ, flagC
 flagN   RESB 1
 flagV   RESB 1
-flagB   RESB 1
 flagD   RESB 1
 flagI   RESB 1
 flagZ   RESB 1

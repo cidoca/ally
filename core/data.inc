@@ -18,4 +18,4 @@
 ; *******
 EXTERN programCounter, PCL, PCH
 EXTERN rA, rX, rY, rS
-EXTERN flagN, flagV, flagB, flagD, flagI, flagZ, flagC
+EXTERN flagN, flagV, flagD, flagI, flagZ, flagC
