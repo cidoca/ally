@@ -23,8 +23,8 @@
 #include "core.h"
 #include "test-cpu.h"
 
-void opcodeNotImplemented(int opcode) {
-    printf("Opcode %02X not implemented!!!\n", opcode);
+void opcodeNotImplemented() {
+    printf("#### Last opcode not implemented!!!\n");
     exit(1);
 }
 

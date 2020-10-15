@@ -22,6 +22,24 @@
 EXTERN opcodeNotImplemented, d6502
 %ENDIF
 
+; * Addressing modes
+; ********************
+__IMP      EQU (0 << 28)
+__ACC      EQU (1 << 28)
+__IMM      EQU (2 << 28)
+__ZP       EQU (3 << 28)
+__ZPX      EQU (4 << 28)
+__ZPY      EQU (5 << 28)
+__ABS      EQU (6 << 28)
+__ABSX     EQU (7 << 28)
+__ABSX2    EQU (8 << 28)
+__ABSY     EQU (9 << 28)
+__ABSY2    EQU (10 << 28)
+__INDX     EQU (11 << 28)
+__INDY     EQU (12 << 28)
+__INDY2    EQU (13 << 28)
+
+
 SECTION .text
 
 GLOBAL pulseCpu
@@ -232,18 +250,6 @@ loadFlags:
     setz [flagZ]
 %ENDMACRO
 
-; * Test bits from accumulator and memory
-; *****************************************
-%MACRO __BIT 0
-    test al, 010000000b
-    setnz [flagN]
-    test al, 001000000b
-    setnz [flagV]
-    test [rA], al
-    setz [flagZ]
-    __NEXT_CYCLE_FECTH_OPCODE
-%ENDMACRO
-
 ; * Compare accumulator with memory
 ; ***********************************
 %MACRO __CMP 1
@@ -251,33 +257,6 @@ loadFlags:
     sets [flagN]
     setz [flagZ]
     setnc [flagC]
-    __NEXT_CYCLE_FECTH_OPCODE
-%ENDMACRO
-
-; * Execute OR operation from accumulator and memory
-; ****************************************************
-%MACRO __ORA 0
-    or [rA], al
-    sets [flagN]
-    setz [flagZ]
-    __NEXT_CYCLE_FECTH_OPCODE
-%ENDMACRO
-
-; * Execute AND operation from accumulator and memory
-; *****************************************************
-%MACRO __AND 0
-    and [rA], al
-    sets [flagN]
-    setz [flagZ]
-    __NEXT_CYCLE_FECTH_OPCODE
-%ENDMACRO
-
-; * Execute XOR operation from accumulator and memory
-; *****************************************************
-%MACRO __EOR 0
-    xor [rA], al
-    sets [flagN]
-    setz [flagZ]
     __NEXT_CYCLE_FECTH_OPCODE
 %ENDMACRO
 
@@ -319,40 +298,16 @@ loadFlags:
     __SET_FLAG_NZ
 %ENDMACRO
 
-; * Add memory content to accumulator
-; *************************************
-%MACRO __ADC 0
-    test BYTE [flagD], 1
-    jnz %%A
-    shr BYTE [flagC], 1
-    adc [rA], al
-    sets [flagN]
-    seto [flagV]
-    setz [flagZ]
-    setc [flagC]
-%%A:    ; TODO: implement opcode with flagD
-    __NEXT_CYCLE_FECTH_OPCODE
-%ENDMACRO
-
-; * Subtract memory content to accumulator
-; ******************************************
-%MACRO __SBC 0
-    xor BYTE [flagC], 1
-    test BYTE [flagD], 1
-    jnz %%A
-    shr BYTE [flagC], 1
-    sbb [rA], al
-    sets [flagN]
-    seto [flagV]
-    setz [flagZ]
-    setnc [flagC]
-%%A:    ; TODO: implement opcode with flagD
-    __NEXT_CYCLE_FECTH_OPCODE
-%ENDMACRO
-
 ; *****************************************
 ; **** COMMON CYCLES **********************
 ; *****************************************
+
+; * Addressing mode Accumulator
+; *******************************
+GLOBAL _ACC
+_ACC:
+    mov al, [rA]
+    __JUMP_MNEMONIC
 
 ; * Addressing mode Immediate
 ; *****************************
@@ -410,6 +365,12 @@ _ABSX3:
     inc BYTE [ADH]
     __NEXT_CYCLE _ABS3
 
+; * Addressing mode Absolute, X (no boundary check)
+; ***************************************************
+GLOBAL _ABSXN
+_ABSXN:
+    ; TODO
+
 ; * Addressing mode Absolute, Y
 ; *******************************
 GLOBAL _ABSY, _ABSY2
@@ -417,6 +378,12 @@ _ABSY:
     __FETCH_ADDRESS_LOW _ABSY2
 _ABSY2:
     __FETCH_ADDRESS_HIGH_IBC [rX], _ABSX3, _ABS3
+
+; * Addressing mode Absolute, Y (no boundary check)
+; ***************************************************
+GLOBAL _ABSYN
+_ABSYN:
+    ; TODO
 
 ; * Addressing mode (Indirect, X)
 ; *********************************
@@ -460,6 +427,12 @@ _INDY3:
 _INDY4:
     __NEXT_CYCLE _ABS3
 
+; * Addressing mode (Indirect), Y (no bounday check)
+; ****************************************************
+GLOBAL _INDYN
+_INDYN:
+    ; TODO
+
 ; * Opcode not implemented
 ; **************************
 GLOBAL _NIMP
@@ -472,10 +445,7 @@ GLOBAL _FETCH_OPCODE
 _FETCH_OPCODE:
     __FETCH_NEXT_BYTE
     movzx eax, al
-%IFNDEF RELEASE
-    mov [opcode], al
-%ENDIF
-    mov eax, [opcodes+eax*4]
+    mov eax, [OPCODES+eax*4]
 
 %IFNDEF RELEASE
     push rax
@@ -484,12 +454,22 @@ _FETCH_OPCODE:
     cmp eax, _NIMP
     jne _FO
     push rax
-    movzx edi, BYTE [opcode]
     call opcodeNotImplemented
     pop rax
 _FO:
 %ENDIF
+
+    test eax, 0F0000000h
+    jnz _FO2
     __NEXT_CYCLE eax
+
+_FO2:
+    mov edx, eax
+    and eax, 0FFFFFFFh
+    mov [MNEMONIC], eax
+    shr edx, 28
+    mov edx, [ADDRESSING_MODES+edx*4]
+    __NEXT_CYCLE edx
 
 ; * Common cycle to store the final result
 ; ******************************************
@@ -510,14 +490,14 @@ _BRANCH:
 _BRANCH2:
     __NEXT_CYCLE_FECTH_OPCODE
 
-; ORA Z-Page - 05 $xx - 2 Clocks - N Z
-; **************************************
-GLOBAL _ORAZ, _ORAZ2
-_ORAZ:
-    __FETCH_ADDRESS_LOW _ORAZ2
-_ORAZ2:
-    __READ_ZERO_PAGE
-    __ORA
+; ORA - 01/05/09/0D/11/15/19/AD - N Z
+;  ************************************
+GLOBAL _ORA
+_ORA:
+    or [rA], al
+    sets [flagN]
+    setz [flagZ]
+    __NEXT_CYCLE_FECTH_OPCODE
 
 ; PHP - 08 - 3 Clocks
 ; *********************
@@ -533,13 +513,6 @@ _PHP2:
     mov esi, [ADDRESS]
     call writeMemory
     __NEXT_CYCLE_FECTH_OPCODE
-
-; ORA Imm - 09 #xx - 2 Clocks - N Z
-; ***********************************
-GLOBAL _ORAI
-_ORAI:
-    __FETCH_NEXT_BYTE
-    __ORA
 
 ; ASL A - 0A - 2 Clocks - N Z C
 ; *******************************
@@ -620,23 +593,26 @@ _JSRA5:
     mov [PCL], al
     __NEXT_CYCLE_FECTH_OPCODE
 
-; BIT Z-Page - 24 $xx - 3 Clocks - N V Z
-; ****************************************
-GLOBAL _BITZ, _BITZ2
-_BITZ:
-    __FETCH_ADDRESS_LOW _BITZ2
-_BITZ2:
-    __READ_ZERO_PAGE
-    __BIT
+; AND - 21/25/29/2D/31/35/39/3D - N Z
+; *************************************
+GLOBAL _AND
+_AND:
+    and [rA], al
+    sets [flagN]
+    setz [flagZ]
+    __NEXT_CYCLE_FECTH_OPCODE
 
-; AND Z-Page - 25 $xx - 3 Clocks - N Z
-; **************************************
-GLOBAL _ANDZ, _ANDZ2
-_ANDZ:
-    __FETCH_ADDRESS_LOW _ANDZ2
-_ANDZ2:
-    __READ_ZERO_PAGE
-    __AND
+; BIT 24/2C - N V Z
+; *******************
+GLOBAL _BIT
+_BIT:
+    test al, 010000000b
+    setnz [flagN]
+    test al, 001000000b
+    setnz [flagV]
+    test [rA], al
+    setz [flagZ]
+    __NEXT_CYCLE_FECTH_OPCODE
 
 ; PLP - 28 - 4 Clocks
 ; **********************
@@ -656,30 +632,12 @@ _PLP3:
     call loadFlags
     __NEXT_CYCLE_FECTH_OPCODE
 
-; AND Imm - 29 #xx - 2 Clocks - N Z
-; ***********************************
-GLOBAL _ANDI
-_ANDI:
-   __FETCH_NEXT_BYTE
-   __AND
-
 ; ROL A - 2A - 2 Clocks - N Z C
 ; *******************************
 GLOBAL _ROLRA
 _ROLRA:
     __ROL BYTE [rA]
     __NEXT_CYCLE_FECTH_OPCODE
-
-; AND Abs - 2D $xxxx - 4 Clocks - N Z
-; *************************************
-GLOBAL _ANDA, _ANDA2, _ANDA3
-_ANDA:
-    __FETCH_ADDRESS_LOW _ANDA2
-_ANDA2:
-    __FETCH_ADDRESS_HIGH _ANDA3
-_ANDA3:
-    __READ_MEMORY
-    __AND
 
 ; BMI Imm - 30 #xx - 2/3/4 Clocks
 ; *********************************
@@ -694,14 +652,14 @@ _SEC:
     mov BYTE [flagC], 1
     __NEXT_CYCLE_FECTH_OPCODE
 
-; EOR Z-Page - 45 $xx - 3 Clocks - N Z
-; **************************************
-GLOBAL _EORZ, _EORZ2
-_EORZ:
-    __FETCH_ADDRESS_LOW _EORZ2
-_EORZ2:
-    __READ_ZERO_PAGE
-    __EOR
+; EOR - 41/45/49/4D/51/55/59/5D - N Z
+; *************************************
+GLOBAL _EOR
+_EOR:
+    xor [rA], al
+    sets [flagN]
+    setz [flagZ]
+    __NEXT_CYCLE_FECTH_OPCODE
 
 ; PHA - 48 - 3 Clocks
 ; *********************
@@ -717,13 +675,6 @@ _PHA2:
     mov esi, [ADDRESS]
     call writeMemory
     __NEXT_CYCLE_FECTH_OPCODE
-
-; EOR Imm - 49 #xx - 2 Clocks - N Z
-; ***********************************
-GLOBAL _EORI
-_EORI:
-    __FETCH_NEXT_BYTE
-    __EOR
 
 ; LSR A - 4A - 2 Clocks - N Z C
 ; *******************************
@@ -785,14 +736,20 @@ _RTS5:
     inc DWORD [programCounter]
     __NEXT_CYCLE_FECTH_OPCODE
 
-; ADC Z-Page - 65 $xx - 3 Clocks - N V Z C
-; ******************************************
-GLOBAL _ADCZ, _ADCZ2
-_ADCZ:
-    __FETCH_ADDRESS_LOW _ADCZ2
-_ADCZ2:
-    __READ_ZERO_PAGE
-    __ADC
+; ADC - 61/65/69/6D/71/75/79/7D - N V Z C
+; *****************************************
+GLOBAL _ADC
+_ADC:
+    test BYTE [flagD], 1
+    jnz _ADC2
+    shr BYTE [flagC], 1
+    adc [rA], al
+    sets [flagN]
+    seto [flagV]
+    setz [flagZ]
+    setc [flagC]
+_ADC2:    ; TODO: implement opcode with flagD
+    __NEXT_CYCLE_FECTH_OPCODE
 
 ; PLA - 68 - 4 Clocks - N Z
 ; ***************************
@@ -813,13 +770,6 @@ _PLA3:
     __SET_FLAG_NZ
     __NEXT_CYCLE_FECTH_OPCODE
 
-; ADC Imm - 69 #xx - 2 Clocks - N V Z C
-; ***************************************
-GLOBAL _ADCI
-_ADCI:
-    __FETCH_NEXT_BYTE
-    __ADC
-
 ; ROR A - 6A - 2 Clocks - N Z C
 ; *******************************
 GLOBAL _RORRA
@@ -827,16 +777,24 @@ _RORRA:
     __ROR BYTE [rA]
     __NEXT_CYCLE_FECTH_OPCODE
 
-; ADC Abs - 6D $xxxx - 4 Clocks - N V Z C
-; *****************************************
-GLOBAL _ADCA, _ADCA2, _ADCA3
-_ADCA:
-    __FETCH_ADDRESS_LOW _ADCA2
-_ADCA2:
-    __FETCH_ADDRESS_HIGH _ADCA3
-_ADCA3:
+; JMP (Ind) - 6C $xx $xx - 5 Clocks
+; ***********************************
+GLOBAL _JMPI, _JMPI2, _JMPI3, _JMPI4
+_JMPI:
+    __FETCH_ADDRESS_LOW _JMPI2
+_JMPI2:
+    __FETCH_ADDRESS_HIGH _JMPI3
+_JMPI3:
     __READ_MEMORY
-    __ADC
+    mov [dataRegister], al
+    __NEXT_CYCLE _JMPI4
+_JMPI4:
+    inc BYTE [ADL]
+    __READ_MEMORY
+    mov [PCH], al
+    mov al, [dataRegister]
+    mov [PCL], al
+    __NEXT_CYCLE_FECTH_OPCODE
 
 ; BVS Imm - 70 #xx - 2/3/4 Clocks
 ; *********************************
@@ -850,17 +808,6 @@ GLOBAL _SEI
 _SEI:
     mov BYTE [flagI], 1
     __NEXT_CYCLE_FECTH_OPCODE
-
-; ADC Abs, X - 7D $xxxx - 4/5 Clocks - N V Z C
-; **********************************************
-GLOBAL _ADCAX, _ADCAX2, _ADCAX3
-_ADCAX:
-    __FETCH_ADDRESS_LOW _ADCAX2
-_ADCAX2:
-    __FETCH_ADDRESS_HIGH_IBC [rX], _ADCAX3, _ADCA3
-_ADCAX3:
-    inc BYTE [ADH]
-    __NEXT_CYCLE _ADCA3
 
 ; STY Z-Page - 84 $xx - 3 Clocks
 ; ********************************
@@ -964,66 +911,22 @@ _TXS:
     mov [rS], al
     __NEXT_CYCLE_FECTH_OPCODE
 
-; LDY Imm - A0 #xx - 2 Clocks - N Z
-; ***********************************
-GLOBAL _LDYI
-_LDYI:
-    __FETCH_NEXT_BYTE
+; LDY A0/A4/AC/B4/VC - N Z
+; **************************
+GLOBAL _LDY
+_LDY:
     __LOAD_REGISTER [rY]
 
-; LDA (Ind, X) - A1 $xx - 6 Clocks - N Z
-; ****************************************
-GLOBAL _LDAIX, _LDAIX2, _LDAIX3, _LDAIX4
-_LDAIX:
-    __FETCH_ADDRESS_LOW _LDAIX2
-_LDAIX2:
-    __ADDRESS_LOW_INDEXED [rX]
-    mov BYTE [ADH], 0
-    __NEXT_CYCLE _LDAIX3
-_LDAIX3:
-    __READ_MEMORY
-    inc BYTE [ADL]
-    mov [dataRegister], al
-    __NEXT_CYCLE _LDAIX4
-_LDAIX4:
-    __READ_MEMORY
-    mov [ADH], al
-    mov al, [dataRegister]
-    mov [ADL], al
-    __NEXT_CYCLE _LDAA3
-
-; LDX Imm - A2 #xx - 2 Clocks - N Z
-; ***********************************
-GLOBAL _LDXI
-_LDXI:
-    __FETCH_NEXT_BYTE
-    __LOAD_REGISTER [rX]
-
-; LDY Z-Page - A4 $xx - 3 Clocks - N Z
-; **************************************
-GLOBAL _LDYZ, _LDYZ2
-_LDYZ:
-    __FETCH_ADDRESS_LOW _LDYZ2
-_LDYZ2:
-    __READ_ZERO_PAGE
-    __LOAD_REGISTER [rY]
-
-; LDA Z-Page - A5 $xx - 3 Clocks - N Z
-; **************************************
-GLOBAL _LDAZ, _LDAZ2
-_LDAZ:
-    __FETCH_ADDRESS_LOW _LDAZ2
-_LDAZ2:
-    __READ_ZERO_PAGE
+; LDA - A1/A5/A9/AD/B1/B5/B9/BD - N Z
+; *************************************
+GLOBAL _LDA
+_LDA:
     __LOAD_REGISTER [rA]
 
-; LDX Z-Page - A6 $xx - 3 Clocks - N Z
-; **************************************
-GLOBAL _LDXZ, _LDXZ2
-_LDXZ:
-    __FETCH_ADDRESS_LOW _LDXZ2
-_LDXZ2:
-    __READ_ZERO_PAGE
+; LDX - A2/A6/AE/B6/BE - N Z
+; ****************************
+GLOBAL _LDX
+_LDX:
     __LOAD_REGISTER [rX]
 
 ; TAY - A8 - 2 Clocks - N Z
@@ -1033,51 +936,11 @@ _TAY:
     mov al, [rA]
     __LOAD_REGISTER [rY]
 
-; LDA Imm - A9 #xx - 2 Clocks - N Z
-; ***********************************
-GLOBAL _LDAI
-_LDAI:
-    __FETCH_NEXT_BYTE
-    __LOAD_REGISTER [rA]
-
 ; TAX - AA - 2 Clocks - N Z
 ; ***************************
 GLOBAL _TAX
 _TAX:
     mov al, [rA]
-    __LOAD_REGISTER [rX]
-
-; LDY Abs - AC $xxxx - 4 Clocks - N Z
-; *************************************
-GLOBAL _LDYA, _LDYA2, _LDYA3
-_LDYA:
-    __FETCH_ADDRESS_LOW _LDYA2
-_LDYA2:
-    __FETCH_ADDRESS_HIGH _LDYA3
-_LDYA3:
-    __READ_MEMORY
-    __LOAD_REGISTER [rY]
-
-; LDA Abs - AD $xxxx - 4 Clocks - N Z
-; *************************************
-GLOBAL _LDAA, _LDAA2, _LDAA3
-_LDAA:
-    __FETCH_ADDRESS_LOW _LDAA2
-_LDAA2:
-    __FETCH_ADDRESS_HIGH _LDAA3
-_LDAA3:
-    __READ_MEMORY
-    __LOAD_REGISTER [rA]
-
-; LDX Abs - AE $xxxx - 4 Clocks - N Z
-; *************************************
-GLOBAL _LDXA, _LDXA2, _LDXA3
-_LDXA:
-    __FETCH_ADDRESS_LOW _LDXA2
-_LDXA2:
-    __FETCH_ADDRESS_HIGH _LDXA3
-_LDXA3:
-    __READ_MEMORY
     __LOAD_REGISTER [rX]
 
 ; BCS Imm - B0 #xx - 2/3/4 Clocks
@@ -1086,47 +949,6 @@ GLOBAL _BCS
 _BCS:
     __BRANCH BYTE [flagC], z
 
-; LDA (Ind), Y - B1 $xx - 5/6 Clocks - N Z
-; ******************************************
-GLOBAL _LDAIY, _LDAIY2, _LDAIY3
-_LDAIY:
-    __FETCH_ADDRESS_LOW _LDAIY2
-_LDAIY2:
-    __READ_ZERO_PAGE
-    mov [dataRegister], al
-    inc BYTE [ADL]
-    __NEXT_CYCLE _LDAIY3
-_LDAIY3:
-    __READ_MEMORY
-    mov [ADH], al
-    mov al, [dataRegister]
-    mov [ADL], al
-    __ADDRESS_LOW_INDEXED [rY]
-    jnc _LDAIY3_2
-    __NEXT_CYCLE _LDAAY3
-_LDAIY3_2:
-    __NEXT_CYCLE _LDAA3
-
-; LDA Z-Page, X - B5 $xx - 4 Clocks - N Z
-; *****************************************
-GLOBAL _LDAZX, _LDAZX2
-_LDAZX:
-    __FETCH_ADDRESS_LOW _LDAZX2
-_LDAZX2:
-    __ADDRESS_LOW_INDEXED [rX]
-    __NEXT_CYCLE _LDAZ2
-
-; LDA Abs, Y - B9 $xxxx - 4/5 Clocks - N Z
-; ******************************************
-GLOBAL _LDAAY, _LDAAY2, _LDAAY3
-_LDAAY:
-    __FETCH_ADDRESS_LOW _LDAAY2
-_LDAAY2:
-    __FETCH_ADDRESS_HIGH_IBC [rY], _LDAAY3, _LDAA3
-_LDAAY3:
-    inc BYTE [ADH]
-    __NEXT_CYCLE _LDAA3
-
 ; TSX - BA - 2 Clocks - N Z
 ; ***************************
 GLOBAL _TSX
@@ -1134,48 +956,16 @@ _TSX:
     mov al, [rS]
     __LOAD_REGISTER [rX]
 
-; LDA Abs, X - BD $xxxx - 4/5 Clocks - N Z
-; ******************************************
-GLOBAL _LDAAX, _LDAAX2
-_LDAAX:
-    __FETCH_ADDRESS_LOW _LDAAX2
-_LDAAX2:
-    __FETCH_ADDRESS_HIGH_IBC [rX], _LDAAY3, _LDAA3
-
-; LDX Abs, Y - BE $xxxx - 4/5 Clocks - N Z
-; ******************************************
-GLOBAL _LDXAY, _LDXAY2, _LDXAY3
-_LDXAY:
-    __FETCH_ADDRESS_LOW _LDXAY2
-_LDXAY2:
-    __FETCH_ADDRESS_HIGH_IBC [rY], _LDXAY3, _LDXA3
-_LDXAY3:
-    inc BYTE [ADH]
-    __NEXT_CYCLE _LDXA3
-
-; CPY Imm - C0 $xx - 2 Clocks - N Z C
-; *************************************
-GLOBAL _CPYI
-_CPYI:
-    __FETCH_NEXT_BYTE
+; CPY - C0/C4/CC - N Z C
+; ************************
+GLOBAL _CPY
+_CPY:
     __CMP [rY]
 
-; CPY Z-Page - C4 $xx - 3 Clocks - N Z C
-; ****************************************
-GLOBAL _CPYZ, _CPYZ2
-_CPYZ:
-    __FETCH_ADDRESS_LOW _CPYZ2
-_CPYZ2:
-    __READ_ZERO_PAGE
-    __CMP [rY]
-
-; CMP Z-Page - C5 $xx - 3 Clocks - N Z C
-; ****************************************
-GLOBAL _CMPZ, _CMPZ2
-_CMPZ:
-    __FETCH_ADDRESS_LOW _CMPZ2
-_CMPZ2:
-    __READ_ZERO_PAGE
+; CMP - C1/C5/C9/CD/D1/D5/D9/DD - N Z C
+; ***************************************
+GLOBAL _CMP
+_CMP:
     __CMP [rA]
 
 ; DEC Z-Page - C6 $xx - 5 Clocks - N Z
@@ -1198,30 +988,12 @@ _INY:
     __INC BYTE [rY]
     __NEXT_CYCLE_FECTH_OPCODE
 
-; CMP Imm - C9 #xx - 2 Clocks - N Z C
-; *************************************
-GLOBAL _CMPI
-_CMPI:
-   __FETCH_NEXT_BYTE
-   __CMP [rA]
-
 ; DEX - CA - 2 Clocks - N Z
 ; ***************************
 GLOBAL _DEX
 _DEX:
     __DEC BYTE [rX]
     __NEXT_CYCLE_FECTH_OPCODE
-
-; CMP Abs - CD $xxxx - 4 Clocks - N Z C
-; ***************************************
-GLOBAL _CMPA, _CMPA2, _CMPA3
-_CMPA:
-    __FETCH_ADDRESS_LOW _CMPA2
-_CMPA2:
-    __FETCH_ADDRESS_HIGH _CMPA3
-_CMPA3:
-    __READ_MEMORY
-    __CMP [rA]
 
 ; BNE Imm - D0 #xx - 2/3/4 Clocks
 ; *********************************
@@ -1236,21 +1008,27 @@ _CLD:
     mov BYTE [flagD], 0
     __NEXT_CYCLE_FECTH_OPCODE
 
-; CPX Imm - E0 $xx - 2 Clocks - N Z C
-; *************************************
-GLOBAL _CPXI
-_CPXI:
-    __FETCH_NEXT_BYTE
+; CPX - E0/E4/EC - N Z C
+; ************************
+GLOBAL _CPX
+_CPX:
     __CMP [rX]
 
-; SBC Z-Page - E5 $xx - 3 Clocks - N V Z C
-; ******************************************
-GLOBAL _SBCZ, _SBCZ2
-_SBCZ:
-    __FETCH_ADDRESS_LOW _SBCZ2
-_SBCZ2:
-    __READ_ZERO_PAGE
-    __SBC
+; SBC - E1/E5/E9/ED/F1/F5/F9/FD - N V Z C
+; *****************************************
+GLOBAL _SBC
+_SBC:
+    xor BYTE [flagC], 1
+    test BYTE [flagD], 1
+    jnz _SBC2
+    shr BYTE [flagC], 1
+    sbb [rA], al
+    sets [flagN]
+    seto [flagV]
+    setz [flagZ]
+    setnc [flagC]
+_SBC2:    ; TODO: implement opcode with flagD
+    __NEXT_CYCLE_FECTH_OPCODE
 
 ; INC Z-Page - E6 $xx - 5 Clocks - N Z
 ; **************************************
@@ -1271,13 +1049,6 @@ GLOBAL _INX
 _INX:
     __INC BYTE [rX]
     __NEXT_CYCLE_FECTH_OPCODE
-
-; SBC Imm - E9 #xx - 2 Clocks - N V C Z
-; ***************************************
-GLOBAL _SBCI
-_SBCI:
-    __FETCH_NEXT_BYTE
-    __SBC
 
 ; * NOP - EA - 2 Clocks
 ; ***********************
@@ -1300,45 +1071,65 @@ _SED:
 
 SECTION .data
 
-GLOBAL opcodes
-opcodes:
-    ;   0/8     1/9     2/A     3/B     4/C     5/D     6/E     7/F
-    DD _NIMP,  _NIMP,  _NIMP,  _NIMP,  _NIMP,  _ORAZ,  _NIMP,  _NIMP
-    DD _PHP,   _ORAI,  _ASLRA, _NIMP,  _NIMP,  _NIMP,  _ASLA,  _NIMP    ; 0
-    DD _BPL,   _NIMP,  _NIMP,  _NIMP,  _NIMP,  _NIMP,  _NIMP,  _NIMP
-    DD _CLC,   _NIMP,  _NIMP,  _NIMP,  _NIMP,  _NIMP,  _ASLAX, _NIMP    ; 1
-    DD _JSRA,  _NIMP,  _NIMP,  _NIMP,  _BITZ,  _ANDZ,  _NIMP,  _NIMP
-    DD _PLP,   _ANDI,  _ROLRA, _NIMP,  _NIMP,  _ANDA,  _NIMP,  _NIMP    ; 2
-    DD _BMI,   _NIMP,  _NIMP,  _NIMP,  _NIMP,  _NIMP,  _NIMP,  _NIMP
-    DD _SEC,   _NIMP,  _NIMP,  _NIMP,  _NIMP,  _NIMP,  _NIMP,  _NIMP    ; 3
-    DD _NIMP,  _NIMP,  _NIMP,  _NIMP,  _NIMP,  _EORZ,  _NIMP,  _NIMP
-    DD _PHA,   _EORI,  _LSRRA, _NIMP,  _JMPA,  _NIMP,  _NIMP,  _NIMP    ; 4
-    DD _BVC,   _NIMP,  _NIMP,  _NIMP,  _NIMP,  _NIMP,  _NIMP,  _NIMP
-    DD _CLI,   _NIMP,  _NIMP,  _NIMP,  _NIMP,  _NIMP,  _NIMP,  _NIMP    ; 5
-    DD _RTS,   _NIMP,  _NIMP,  _NIMP,  _NIMP,  _ADCZ,  _NIMP,  _NIMP
-    DD _PLA,   _ADCI,  _RORRA, _NIMP,  _NIMP,  _ADCA,  _NIMP,  _NIMP    ; 6
-    DD _BVS,   _NIMP,  _NIMP,  _NIMP,  _NIMP,  _NIMP,  _NIMP,  _NIMP
-    DD _SEI,   _NIMP,  _NIMP,  _NIMP,  _NIMP,  _ADCAX, _NIMP,  _NIMP    ; 7
-    DD _NIMP,  _NIMP,  _NIMP,  _NIMP,  _STYZ,  _STAZ,  _STXZ,  _NIMP
-    DD _DEY,   _NIMP,  _TXA,   _NIMP,  _STYA,  _STAA,  _STXA,  _NIMP    ; 8
-    DD _BCC,   _NIMP,  _NIMP,  _NIMP,  _NIMP,  _STAZX, _NIMP,  _NIMP
-    DD _TYA,   _NIMP,  _TXS,   _NIMP,  _NIMP,  _NIMP,  _NIMP,  _NIMP    ; 9
-    DD _LDYI,  _LDAIX, _LDXI,  _NIMP,  _LDYZ,  _LDAZ,  _LDXZ,  _NIMP
-    DD _TAY,   _LDAI,  _TAX,   _NIMP,  _LDYA,  _LDAA,  _LDXA,  _NIMP    ; A
-    DD _BCS,   _LDAIY, _NIMP,  _NIMP,  _NIMP,  _LDAZX, _NIMP,  _NIMP
-    DD _NIMP,  _LDAAY, _TSX,   _NIMP,  _NIMP,  _LDAAX, _LDXAY, _NIMP    ; B
-    DD _CPYI,  _NIMP,  _NIMP,  _NIMP,  _CPYZ,  _CMPZ,  _DECZ,  _NIMP
-    DD _INY,   _CMPI,  _DEX,   _NIMP,  _NIMP,  _CMPA,  _NIMP,  _NIMP    ; C
-    DD _BNE,   _NIMP,  _NIMP,  _NIMP,  _NIMP,  _NIMP,  _NIMP,  _NIMP
-    DD _CLD,   _NIMP,  _NIMP,  _NIMP,  _NIMP,  _NIMP,  _NIMP,  _NIMP    ; D
-    DD _CPXI,  _NIMP,  _NIMP,  _NIMP,  _NIMP,  _SBCZ,  _INCZ,  _NIMP
-    DD _INX,   _SBCI,  _NOP,   _NIMP,  _NIMP,  _NIMP,  _NIMP,  _NIMP    ; E
-    DD _BEQ,   _NIMP,  _NIMP,  _NIMP,  _NIMP,  _NIMP,  _NIMP,  _NIMP
-    DD _SED,   _NIMP,  _NIMP,  _NIMP,  _NIMP,  _NIMP,  _NIMP,  _NIMP    ; F
+GLOBAL OPCODES
+OPCODES:
+    ;   0/8             1/9             2/A             3/B             4/C             5/D             6/E             7/F
+    DD _NIMP,          _ORA + __INDX,  _NIMP,          _NIMP,          _NIMP,          _ORA + __ZP,    _NIMP,          _NIMP
+    DD _PHP,           _ORA + __IMM,   _ASLRA,         _NIMP,          _NIMP,          _ORA + __ABS,   _ASLA,          _NIMP    ; 0
+    DD _BPL,           _ORA + __INDY,  _NIMP,          _NIMP,          _NIMP,          _ORA + __ZPX,   _NIMP,          _NIMP
+    DD _CLC,           _ORA + __ABSY,  _NIMP,          _NIMP,          _NIMP,          _ORA + __ABSX,  _ASLAX,         _NIMP    ; 1
 
-GLOBAL addressingModes
-addressingModes:
-    DB 0
+    DD _JSRA,          _AND + __INDX,  _NIMP,          _NIMP,          _BIT + __ZP,    _AND + __ZP,    _NIMP,          _NIMP
+    DD _PLP,           _AND + __IMM,   _ROLRA,         _NIMP,          _BIT + __ABS,   _AND + __ABS,   _NIMP,          _NIMP    ; 2
+    DD _BMI,           _AND + __INDY,  _NIMP,          _NIMP,          _NIMP,          _AND + __ZPX,   _NIMP,          _NIMP
+    DD _SEC,           _AND + __ABSY,  _NIMP,          _NIMP,          _NIMP,          _AND + __ABSX,  _NIMP,          _NIMP    ; 3
+
+    DD _NIMP,          _EOR + __INDX,  _NIMP,          _NIMP,          _NIMP,          _EOR + __ZP,    _NIMP,          _NIMP
+    DD _PHA,           _EOR + __IMM,   _LSRRA,         _NIMP,          _JMPA,          _EOR + __ABS,   _NIMP,          _NIMP    ; 4
+    DD _BVC,           _EOR + __INDY,  _NIMP,          _NIMP,          _NIMP,          _EOR + __ZPX,   _NIMP,          _NIMP
+    DD _CLI,           _EOR + __ABSY,  _NIMP,          _NIMP,          _NIMP,          _EOR + __ABSX,  _NIMP,          _NIMP    ; 5
+
+    DD _RTS,           _ADC + __INDX,  _NIMP,          _NIMP,          _NIMP,          _ADC + __ZP,    _NIMP,          _NIMP
+    DD _PLA,           _ADC + __IMM,   _RORRA,         _NIMP,          _JMPI,          _ADC + __ABS,   _NIMP,          _NIMP    ; 6
+    DD _BVS,           _ADC + __INDY,  _NIMP,          _NIMP,          _NIMP,          _ADC + __ZPX,   _NIMP,          _NIMP
+    DD _SEI,           _ADC + __ABSY,  _NIMP,          _NIMP,          _NIMP,          _ADC + __ABSX,  _NIMP,          _NIMP    ; 7
+
+    DD _NIMP,          _NIMP,          _NIMP,          _NIMP,          _STYZ,          _STAZ,          _STXZ,          _NIMP
+    DD _DEY,           _NIMP,          _TXA,           _NIMP,          _STYA,          _STAA,          _STXA,          _NIMP    ; 8
+    DD _BCC,           _NIMP,          _NIMP,          _NIMP,          _NIMP,          _STAZX,         _NIMP,          _NIMP
+    DD _TYA,           _NIMP,          _TXS,           _NIMP,          _NIMP,          _NIMP,          _NIMP,          _NIMP    ; 9
+
+    DD _LDY + __IMM,   _LDA + __INDX,  _LDX + __IMM,   _NIMP,          _LDY + __ZP,    _LDA + __ZP,    _LDX + __ZP,    _NIMP
+    DD _TAY,           _LDA + __IMM,   _TAX,           _NIMP,          _LDY + __ABS,   _LDA + __ABS,   _LDX + __ABS,   _NIMP    ; A
+    DD _BCS,           _LDA + __INDY,  _NIMP,          _NIMP,          _LDY + __ZPX,   _LDA + __ZPX,   _LDX + __ZPY,   _NIMP
+    DD _NIMP,          _LDA + __ABSY,  _TSX,           _NIMP,          _LDY + __ABSX,  _LDA + __ABSX,  _LDX + __ABSY,  _NIMP    ; B
+
+    DD _CPY + __IMM,   _CMP + __INDX,  _NIMP,          _NIMP,          _CPY + __ZP,    _CMP + __ZP,    _DECZ,          _NIMP
+    DD _INY,           _CMP + __IMM,   _DEX,           _NIMP,          _CPY + __ABS,   _CMP + __ABS,   _NIMP,          _NIMP    ; C
+    DD _BNE,           _CMP + __INDY,  _NIMP,          _NIMP,          _NIMP,          _CMP + __ZPX,   _NIMP,          _NIMP
+    DD _CLD,           _CMP + __ABSY,  _NIMP,          _NIMP,          _NIMP,          _CMP + __ABSX,  _NIMP,          _NIMP    ; D
+
+    DD _CPX + __IMM,   _SBC + __INDX,  _NIMP,          _NIMP,          _CPX + __ZP,    _SBC + __ZP,    _INCZ,          _NIMP
+    DD _INX,           _SBC + __IMM,   _NOP,           _NIMP,          _CPX + __ABS,   _SBC + __ABS,   _NIMP,          _NIMP    ; E
+    DD _BEQ,           _SBC + __INDY,  _NIMP,          _NIMP,          _NIMP,          _SBC + __ZPX,   _NIMP,          _NIMP
+    DD _SED,           _SBC + __ABSY,  _NIMP,          _NIMP,          _NIMP,          _SBC + __ABSX,  _NIMP,          _NIMP    ; F
+
+GLOBAL ADDRESSING_MODES
+ADDRESSING_MODES:
+    DD 0        ; Implied
+    DD _ACC     ; Accumulator
+    DD _IMM     ; Immediate #
+    DD _ZP      ; Z-Page
+    DD _ZPX     ; Z-Page, X
+    DD _ZPY     ; Z-Page, Y
+    DD _ABS     ; Absolute
+    DD _ABSX    ; Absolute, X
+    DD _ABSXN   ; Absolute, X (no boundary check)
+    DD _ABSY    ; Absolute, Y
+    DD _ABSYN   ; Absolute, Y (no boundary check)
+    DD _INDX    ; (Indirect, X)
+    DD _INDY    ; (Indirect), Y
+    DD _INDYN   ; (Indirect), Y (no boundary check)
 
 
 SECTION .bss
@@ -1354,7 +1145,3 @@ ADH             RESB 3      ; padding for 4 bytes
 
 GLOBAL dataRegister
 dataRegister    RESB 1
-
-%IFNDEF RELEASE
-opcode          RESB 1
-%ENDIF
