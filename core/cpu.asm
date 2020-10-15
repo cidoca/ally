@@ -67,6 +67,8 @@ saveFlags:
     or al, [flagC]
     ret
 
+; * Extract all flags from one byte
+; ***********************************
 GLOBAL loadFlags
 loadFlags:
     test al, 001h
@@ -83,6 +85,10 @@ loadFlags:
     setnz [flagN]
     ret
 
+; *****************************************
+; **** MACROS *****************************
+; *****************************************
+
 ; * Define next cycle
 ; *********************
 %MACRO __NEXT_CYCLE 1
@@ -91,15 +97,29 @@ loadFlags:
 %ENDMACRO
 
 ; * Point next CPU cycle to _FETCH_OPCODE
-; **************************************
+; *****************************************
 %MACRO __NEXT_CYCLE_FECTH_OPCODE 0
     __NEXT_CYCLE _FETCH_OPCODE
 %ENDMACRO
 
 ; * Point next CPU cycle to _STORE_DATA_RESULT
-; ********************************************
+; **********************************************
 %MACRO __NEXT_CYCLE_STORE_RESULT 0
     __NEXT_CYCLE _STORE_DATA_RESULT
+%ENDMACRO
+
+; * Point next CPU cycle to ALU
+; * *****************************
+%MACRO __NEXT_CYCLE_ALU 0
+    mov eax, [MNEMONIC]
+    __NEXT_CYCLE eax
+%ENDMACRO
+
+; * After resolve addressing mode, jump to ALU
+; **********************************************
+%MACRO __JUMP_MNEMONIC 0
+    mov edx, [MNEMONIC]
+    jmp rdx
 %ENDMACRO
 
 ; * Fetch next byte from Program Counter
@@ -148,7 +168,7 @@ loadFlags:
 ; * Read memory from address register
 ; *************************************
 %MACRO __READ_MEMORY 0
-    mov esi, [addressRegister]
+    mov esi, [ADDRESS]
     call readMemory
 %ENDMACRO
 
@@ -179,7 +199,7 @@ loadFlags:
 ; ******************************
 %MACRO __STORE_RESULT 1
     mov al, %1
-    mov esi, [addressRegister]
+    mov esi, [ADDRESS]
     call writeMemory
     __NEXT_CYCLE_FECTH_OPCODE
 %ENDMACRO
@@ -231,6 +251,7 @@ loadFlags:
     sets [flagN]
     setz [flagZ]
     setnc [flagC]
+    __NEXT_CYCLE_FECTH_OPCODE
 %ENDMACRO
 
 ; * Execute OR operation from accumulator and memory
@@ -329,6 +350,116 @@ loadFlags:
     __NEXT_CYCLE_FECTH_OPCODE
 %ENDMACRO
 
+; *****************************************
+; **** COMMON CYCLES **********************
+; *****************************************
+
+; * Addressing mode Immediate
+; *****************************
+GLOBAL _IMM
+_IMM:
+    __FETCH_NEXT_BYTE
+    __JUMP_MNEMONIC
+
+; * Addressing mode Z-Page
+; **************************
+GLOBAL _ZP, _ZP2
+_ZP:
+    __FETCH_ADDRESS_LOW _ZP2
+_ZP2:
+    __READ_ZERO_PAGE
+    __JUMP_MNEMONIC
+
+; * Addressing mode Z-Page, X
+; *****************************
+GLOBAL _ZPX, _ZPX2
+_ZPX:
+    __FETCH_ADDRESS_LOW _ZPX2
+_ZPX2:
+    __ADDRESS_LOW_INDEXED [rX]
+    __NEXT_CYCLE _ZP2
+
+; * Addressing mode Z-Page, Y
+; *****************************
+GLOBAL _ZPY, _ZPY2
+_ZPY:
+    __FETCH_ADDRESS_LOW _ZPX2
+_ZPY2:
+    __ADDRESS_LOW_INDEXED [rY]
+    __NEXT_CYCLE _ZP2
+
+; * Addressing mode Absolute
+; ****************************
+GLOBAL _ABS, _ABS2, _ABS3
+_ABS:
+    __FETCH_ADDRESS_LOW _ABS2
+_ABS2:
+    __FETCH_ADDRESS_HIGH _ABS3
+_ABS3:
+    __READ_MEMORY
+    __JUMP_MNEMONIC
+
+; * Addressing mode Absolute, X
+; *******************************
+GLOBAL _ABSX, _ABSX2, _ABSX3
+_ABSX:
+    __FETCH_ADDRESS_LOW _ABSX2
+_ABSX2:
+    __FETCH_ADDRESS_HIGH_IBC [rX], _ABSX3, _ABS3
+_ABSX3:
+    inc BYTE [ADH]
+    __NEXT_CYCLE _ABS3
+
+; * Addressing mode Absolute, Y
+; *******************************
+GLOBAL _ABSY, _ABSY2
+_ABSY:
+    __FETCH_ADDRESS_LOW _ABSY2
+_ABSY2:
+    __FETCH_ADDRESS_HIGH_IBC [rX], _ABSX3, _ABS3
+
+; * Addressing mode (Indirect, X)
+; *********************************
+GLOBAL _INDX, _INDX2, _INDX3, _INDX4
+_INDX:
+    __FETCH_ADDRESS_LOW _INDX2
+_INDX2:
+    __ADDRESS_LOW_INDEXED [rX]
+    mov BYTE [ADH], 0
+    __NEXT_CYCLE _INDX3
+_INDX3:
+    __READ_MEMORY
+    mov [dataRegister], al
+    inc BYTE [ADL]
+    __NEXT_CYCLE _INDX4
+_INDX4:
+    __READ_MEMORY
+    mov [ADH], al
+    mov al, [dataRegister]
+    mov [ADL], al
+    __NEXT_CYCLE _ABS3 
+
+; * Addressing mode (Indirect), Y
+; *********************************
+GLOBAL _INDY, _INDY2, _INDY3, _INDY4
+_INDY:
+    __FETCH_ADDRESS_LOW _INDY2
+_INDY2:
+    __READ_ZERO_PAGE
+    mov [dataRegister], al
+    inc BYTE [ADL]
+    __NEXT_CYCLE _INDY3
+_INDY3:
+    __READ_MEMORY
+    mov [ADH], al
+    mov al, [dataRegister]
+    mov [ADL], al
+    __ADDRESS_LOW_INDEXED [rY]
+    jnc _INDY4
+    __NEXT_CYCLE _ABSX3
+_INDY4:
+    __NEXT_CYCLE _ABS3
+
 ; * Opcode not implemented
 ; **************************
 GLOBAL _NIMP
@@ -399,7 +530,7 @@ _PHP2:
     mov [ADL], al
     mov BYTE [ADH], 1
     call saveFlags
-    mov esi, [addressRegister]
+    mov esi, [ADDRESS]
     call writeMemory
     __NEXT_CYCLE_FECTH_OPCODE
 
@@ -454,7 +585,7 @@ _ASLAX2:
     __FETCH_ADDRESS_HIGH _ASLAX3
 _ASLAX3:
     movzx eax, BYTE [rX]
-    add DWORD [addressRegister], eax
+    add DWORD [ADDRESS], eax
     __NEXT_CYCLE _ASLA3
 
 ; JSR Abs - 20 $xxxx - 6 Clocks
@@ -471,14 +602,14 @@ _JSRA2:
     __NEXT_CYCLE _JSRA3
 _JSRA3:
     mov al, [PCH]
-    mov esi, [addressRegister]
+    mov esi, [ADDRESS]
     call writeMemory
     dec BYTE [rS]
-    dec DWORD [addressRegister]
+    dec DWORD [ADDRESS]
     __NEXT_CYCLE _JSRA4
 _JSRA4:
     mov al, [PCL]
-    mov esi, [addressRegister]
+    mov esi, [ADDRESS]
     call writeMemory
     dec BYTE [rS]
     __NEXT_CYCLE _JSRA5
@@ -519,8 +650,8 @@ _PLP2:
     __NEXT_CYCLE _PLP3
 _PLP3:
     inc BYTE [rS]
-    inc DWORD [addressRegister]
-    mov esi, [addressRegister]
+    inc DWORD [ADDRESS]
+    mov esi, [ADDRESS]
     call readMemory
     call loadFlags
     __NEXT_CYCLE_FECTH_OPCODE
@@ -574,7 +705,7 @@ _EORZ2:
 
 ; PHA - 48 - 3 Clocks
 ; *********************
-GLOBAL _PHA, PHA2
+GLOBAL _PHA, _PHA2
 _PHA:
     __NEXT_CYCLE _PHA2
 _PHA2:
@@ -583,7 +714,7 @@ _PHA2:
     mov [ADL], al
     mov BYTE [ADH], 1
     mov al, [rA]
-    mov esi, [addressRegister]
+    mov esi, [ADDRESS]
     call writeMemory
     __NEXT_CYCLE_FECTH_OPCODE
 
@@ -638,15 +769,15 @@ _RTS2:
     __NEXT_CYCLE _RTS3
 _RTS3:
     inc BYTE [rS]
-    inc DWORD [addressRegister]
-    mov esi, [addressRegister]
+    inc DWORD [ADDRESS]
+    mov esi, [ADDRESS]
     call readMemory
     mov [PCL], al
     __NEXT_CYCLE _RTS4
 _RTS4:
     inc BYTE [rS]
-    inc DWORD [addressRegister]
-    mov esi, [addressRegister]
+    inc DWORD [ADDRESS]
+    mov esi, [ADDRESS]
     call readMemory
     mov [PCH], al
     __NEXT_CYCLE _RTS5
@@ -675,8 +806,8 @@ _PLA2:
     __NEXT_CYCLE _PLA3
 _PLA3:
     inc BYTE [rS]
-    inc DWORD [addressRegister]
-    mov esi, [addressRegister]
+    inc DWORD [ADDRESS]
+    mov esi, [ADDRESS]
     call readMemory
     mov [rA], al
     __SET_FLAG_NZ
@@ -1028,7 +1159,6 @@ GLOBAL _CPYI
 _CPYI:
     __FETCH_NEXT_BYTE
     __CMP [rY]
-    __NEXT_CYCLE_FECTH_OPCODE
 
 ; CPY Z-Page - C4 $xx - 3 Clocks - N Z C
 ; ****************************************
@@ -1038,7 +1168,6 @@ _CPYZ:
 _CPYZ2:
     __READ_ZERO_PAGE
     __CMP [rY]
-    __NEXT_CYCLE_FECTH_OPCODE
 
 ; CMP Z-Page - C5 $xx - 3 Clocks - N Z C
 ; ****************************************
@@ -1048,7 +1177,6 @@ _CMPZ:
 _CMPZ2:
     __READ_ZERO_PAGE
     __CMP [rA]
-    __NEXT_CYCLE_FECTH_OPCODE
 
 ; DEC Z-Page - C6 $xx - 5 Clocks - N Z
 ; **************************************
@@ -1076,7 +1204,6 @@ GLOBAL _CMPI
 _CMPI:
    __FETCH_NEXT_BYTE
    __CMP [rA]
-   __NEXT_CYCLE_FECTH_OPCODE
 
 ; DEX - CA - 2 Clocks - N Z
 ; ***************************
@@ -1095,7 +1222,6 @@ _CMPA2:
 _CMPA3:
     __READ_MEMORY
     __CMP [rA]
-    __NEXT_CYCLE_FECTH_OPCODE
 
 ; BNE Imm - D0 #xx - 2/3/4 Clocks
 ; *********************************
@@ -1116,7 +1242,6 @@ GLOBAL _CPXI
 _CPXI:
     __FETCH_NEXT_BYTE
     __CMP [rX]
-    __NEXT_CYCLE_FECTH_OPCODE
 
 ; SBC Z-Page - E5 $xx - 3 Clocks - N V Z C
 ; ******************************************
@@ -1211,14 +1336,19 @@ opcodes:
     DD _BEQ,   _NIMP,  _NIMP,  _NIMP,  _NIMP,  _NIMP,  _NIMP,  _NIMP
     DD _SED,   _NIMP,  _NIMP,  _NIMP,  _NIMP,  _NIMP,  _NIMP,  _NIMP    ; F
 
+GLOBAL addressingModes
+addressingModes:
+    DB 0
+
 
 SECTION .bss
 
-GLOBAL nextCpuCycle
+GLOBAL nextCpuCycle, MNEMONIC
 nextCpuCycle    RESD 1
+MNEMONIC        RESD 1
 
-GLOBAL addressRegister, ADL, ADH
-addressRegister:
+GLOBAL ADDRESS, ADL, ADH
+ADDRESS:
 ADL             RESB 1
 ADH             RESB 3      ; padding for 4 bytes
 
