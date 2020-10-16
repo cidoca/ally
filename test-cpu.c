@@ -683,6 +683,8 @@ void runTest(const CPU_INSTRUCTION *i) {
     }
 
     initCpu();
+    ADL = ADH = rA = rX = rY = rS = DATA_BUFFER = 0x55;
+    flagC = flagZ = flagI = flagD = flagV = flagN = 0;
     while (1) {
         int n = (int)(c - &i->cycles[0]);
 
@@ -760,25 +762,29 @@ void runTest(const CPU_INSTRUCTION *i) {
 
 int main(int argc, char **argv)
 {
+    runTest(&NOP_EA);
     runTest(&CLI_58_SEI_78);
+
+    runTest(&LDA_A9);
+    runTest(&LDA_A5);
+    runTest(&LDA_B5);
+    runTest(&LDA_AD);
+    runTest(&LDA_BD);
+    runTest(&LDA_B9);
+    runTest(&LDA_A1);
+    runTest(&LDA_B1);
+
+    runTest(&LDX_A2);
+    runTest(&LDX_A6);
+
+    runTest(&LDY_A0);
+    runTest(&LDY_A4);
+
     runTest(&TXA_8A);
     runTest(&TYA_98);
     runTest(&TXS_9A_TSX_BA);
-    runTest(&LDY_A0);
-    runTest(&LDA_A1);
-    runTest(&LDX_A2);
-    runTest(&LDY_A4);
-    runTest(&LDA_A5);
-    runTest(&LDX_A6);
     runTest(&TAY_A8);
-    runTest(&LDA_A9);
     runTest(&TAX_AA);
-    runTest(&LDA_AD);
-    runTest(&LDA_B1);
-    runTest(&LDA_B5);
-    runTest(&LDA_B9);
-    runTest(&LDA_BD);
-    runTest(&NOP_EA);
 
     return 0;
 }

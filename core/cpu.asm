@@ -40,7 +40,6 @@ __ABSY   EQU (12 << 28)
 __ABSY2  EQU (13 << 28)
 __INDX   EQU (14 << 28)
 __INDY   EQU (15 << 28)
-;__INDY2  EQU (15 << 28)
 
 
 SECTION .text
@@ -335,7 +334,7 @@ _ZP2_2:
 
 ; * Addressing mode Z-Page, X
 ; *****************************
-GLOBAL _ZPX, _ZPX_2
+GLOBAL _ZPX
 _ZPX:
     __FETCH_NEXT_BYTE
     mov [ADL], al
@@ -356,16 +355,19 @@ _ZPX2_2:
 
 ; * Addressing mode Z-Page, Y
 ; *****************************
-GLOBAL _ZPY, _ZPY2
+GLOBAL _ZPY
 _ZPY:
-    __FETCH_ADDRESS_LOW _ZPY2
+    __FETCH_NEXT_BYTE
+    mov [ADL], al
+    mov BYTE [ADH], 0
+    __NEXT_CYCLE _ZPY2
 _ZPY2:
     __ADDRESS_LOW_INDEXED [rY]
     __NEXT_CYCLE_ALU
 
 ; * Addressing mode Absolute
 ; ****************************
-GLOBAL _ABS, _ABS_2
+GLOBAL _ABS
 _ABS:
     __FETCH_ADDRESS_LOW _ABS_2
 _ABS_2:
@@ -375,7 +377,7 @@ _ABS_2:
 
 ; * Addressing mode Absolute (c=2)
 ; **********************************
-GLOBAL _ABS2, _ABS2_2, _ABS2_3
+GLOBAL _ABS2
 _ABS2:
     __FETCH_ADDRESS_LOW _ABS2_2
 _ABS2_2:
@@ -387,7 +389,7 @@ _ABS2_3:
 
 ; * Addressing mode Absolute, X
 ; *******************************
-GLOBAL _ABSX, _ABSX_2, _ABSX_3
+GLOBAL _ABSX
 _ABSX:
     __FETCH_ADDRESS_LOW _ABSX_2
 _ABSX_2:
@@ -398,7 +400,7 @@ _ABSX_3:
 
 ; * Addressing mode Absolute, X (c=2)
 ; *************************************
-GLOBAL _ABSX2, _ABSX2_2, _ABSX2_3
+GLOBAL _ABSX2
 _ABSX2:
     __FETCH_ADDRESS_LOW _ABSX2_2
 _ABSX2_2:
@@ -410,7 +412,7 @@ _ABSX2_3:
 
 ; * Addressing mode Absolute, X (store)
 ; ***************************************
-GLOBAL _ABSX3, _ABSX3_2, _ABSX3_3
+GLOBAL _ABSX3
 _ABSX3:
     __FETCH_ADDRESS_LOW _ABSX3_2
 _ABSX3_2:
@@ -422,7 +424,7 @@ _ABSX3_3:
 
 ; * Addressing mode Absolute, Y
 ; *******************************
-GLOBAL _ABSY, _ABSY_2
+GLOBAL _ABSY
 _ABSY:
     __FETCH_ADDRESS_LOW _ABSY_2
 _ABSY_2:
@@ -442,7 +444,7 @@ _ABSY2_3:
 
 ; * Addressing mode (Indirect, X)
 ; *********************************
-GLOBAL _INDX, _INDX2, _INDX3, _INDX4
+GLOBAL _INDX
 _INDX:
     __FETCH_ADDRESS_LOW _INDX2
 _INDX2:
@@ -463,7 +465,7 @@ _INDX4:
 
 ; * Addressing mode (Indirect), Y
 ; *********************************
-GLOBAL _INDY, _INDY2, _INDY3, _INDY4
+GLOBAL _INDY
 _INDY:
     __FETCH_ADDRESS_LOW _INDY2
 _INDY2:
@@ -481,12 +483,6 @@ _INDY3:
     __NEXT_CYCLE _ABSX_3
 _INDY4:
     __NEXT_CYCLE_ALU
-
-; * Addressing mode (Indirect), Y (no bounday check)
-; ****************************************************
-GLOBAL _INDYN
-_INDYN:
-    ; TODO
 
 ; * Opcode not implemented
 ; **************************
@@ -545,6 +541,12 @@ _BRANCH:
 _BRANCH2:
     __NEXT_CYCLE_FECTH_OPCODE
 
+; BRK - 00 - 7 Clocks - B I
+; ***************************
+GLOBAL _BRK
+_BRK:
+    ; TODO
+
 ; ORA - 01/05/09/0D/11/15/19/AD - N Z
 ;  ************************************
 GLOBAL _ORA
@@ -555,12 +557,15 @@ _ORA:
     setz [flagZ]
     __NEXT_CYCLE_FECTH_OPCODE
 
-; ASL - 06/0E/16/1E - N Z C
-; ***************************
-GLOBAL _ASL
+; ASL - 06/0A/0E/16/1E - N Z C
+; ******************************
+GLOBAL _ASL, _ASLRA
 _ASL:
     __ASL BYTE [DATA_BUFFER]
     __NEXT_CYCLE_STORE_RESULT
+_ASLRA:
+    __ASL BYTE [rA]
+    __NEXT_CYCLE_FECTH_OPCODE
 
 ; PHP - 08 - 3 Clocks
 ; *********************
@@ -575,13 +580,6 @@ _PHP2:
     call saveFlags
     mov esi, [ADDRESS]
     call writeMemory
-    __NEXT_CYCLE_FECTH_OPCODE
-
-; ASL A - 0A - 2 Clocks - N Z C
-; *******************************
-GLOBAL _ASLRA
-_ASLRA:
-    __ASL BYTE [rA]
     __NEXT_CYCLE_FECTH_OPCODE
 
 ; BPL Imm - 10 #xx - 2/3/4 Clocks
@@ -651,12 +649,15 @@ _BIT:
     setz [flagZ]
     __NEXT_CYCLE_FECTH_OPCODE
 
-; ROL - 26/2E/36/3E - N Z C
-; ***************************
-GLOBAL _ROL
+; ROL - 26/2A/2E/36/3E - N Z C
+; ******************************
+GLOBAL _ROL, _ROLRA
 _ROL:
     __ROL BYTE [DATA_BUFFER]
     __NEXT_CYCLE_STORE_RESULT
+_ROLRA:
+    __ROL BYTE [rA]
+    __NEXT_CYCLE_FECTH_OPCODE
 
 ; PLP - 28 - 4 Clocks
 ; **********************
@@ -676,13 +677,6 @@ _PLP3:
     call loadFlags
     __NEXT_CYCLE_FECTH_OPCODE
 
-; ROL A - 2A - 2 Clocks - N Z C
-; *******************************
-GLOBAL _ROLRA
-_ROLRA:
-    __ROL BYTE [rA]
-    __NEXT_CYCLE_FECTH_OPCODE
-
 ; BMI Imm - 30 #xx - 2/3/4 Clocks
 ; *********************************
 GLOBAL _BMI
@@ -696,6 +690,12 @@ _SEC:
     mov BYTE [flagC], 1
     __NEXT_CYCLE_FECTH_OPCODE
 
+; RTI - 40 - 6 Clocks
+; *********************
+GLOBAL _RTI
+_RTI:
+    ; TODO
+
 ; EOR - 41/45/49/4D/51/55/59/5D - N Z
 ; *************************************
 GLOBAL _EOR
@@ -706,12 +706,15 @@ _EOR:
     setz [flagZ]
     __NEXT_CYCLE_FECTH_OPCODE
 
-; LSR 46/4E/56/5E - N Z C
-; *************************
-GLOBAL _LSR
+; LSR 46/4A/4E/56/5E - N Z C
+; ****************************
+GLOBAL _LSR, _LSRRA
 _LSR:
     __LSR BYTE [DATA_BUFFER]
     __NEXT_CYCLE_STORE_RESULT
+_LSRRA:
+    __LSR BYTE [rA]
+    __NEXT_CYCLE_FECTH_OPCODE
 
 ; PHA - 48 - 3 Clocks
 ; *********************
@@ -726,13 +729,6 @@ _PHA2:
     mov al, [rA]
     mov esi, [ADDRESS]
     call writeMemory
-    __NEXT_CYCLE_FECTH_OPCODE
-
-; LSR A - 4A - 2 Clocks - N Z C
-; *******************************
-GLOBAL _LSRRA
-_LSRRA:
-    __LSR BYTE [rA]
     __NEXT_CYCLE_FECTH_OPCODE
 
 ; JMP Abs - 4C $xxxx - 3 Clocks
@@ -804,12 +800,15 @@ _ADC:
 _ADC2:    ; TODO: implement opcode with flagD
     __NEXT_CYCLE_FECTH_OPCODE
 
-; ROR - 66/6E/76/7E - N Z C
-; ***************************
-GLOBAL _ROR
+; ROR - 66/6A/6E/76/7E - N Z C
+; ******************************
+GLOBAL _ROR, _RORRA
 _ROR:
     __ROR BYTE [DATA_BUFFER]
     __NEXT_CYCLE_STORE_RESULT
+_RORRA:
+    __ROR BYTE [rA]
+    __NEXT_CYCLE_FECTH_OPCODE
 
 ; PLA - 68 - 4 Clocks - N Z
 ; ***************************
@@ -828,13 +827,6 @@ _PLA3:
     call readMemory
     mov [rA], al
     __SET_FLAG_NZ
-    __NEXT_CYCLE_FECTH_OPCODE
-
-; ROR A - 6A - 2 Clocks - N Z C
-; *******************************
-GLOBAL _RORRA
-_RORRA:
-    __ROR BYTE [rA]
     __NEXT_CYCLE_FECTH_OPCODE
 
 ; JMP (Ind) - 6C $xx $xx - 5 Clocks
@@ -869,28 +861,39 @@ _SEI:
     mov BYTE [flagI], 1
     __NEXT_CYCLE_FECTH_OPCODE
 
-; STY Z-Page - 84 $xx - 3 Clocks
-; ********************************
-GLOBAL _STYZ, _STYZ2
-_STYZ:
-    __FETCH_ADDRESS_LOW _STYZ2
-_STYZ2:
-    mov BYTE [ADH], 0
+; STY - 84/8C/94
+; ****************
+GLOBAL _STY
+_STY:
     __STORE_RESULT [rY]
 
 ; STA - 81/85/8D/91/95/99/9D
 ; *****************************
-GLOBAL _STA
+GLOBAL _STA, _STAIY, _STAIY2, _STAIY3, _STAIY4
 _STA:
     __STORE_RESULT [rA]
+_STAIY:
+    __FETCH_ADDRESS_LOW _STAIY2
+_STAIY2:
+    __READ_ZERO_PAGE
+    mov [DATA_BUFFER], al
+    inc BYTE [ADL]
+    __NEXT_CYCLE _STAIY3
+_STAIY3:
+    __READ_MEMORY
+    mov [ADH], al
+    mov al, [DATA_BUFFER]
+    mov [ADL], al
+    __NEXT_CYCLE _STAIY4
+_STAIY4:
+    movzx eax, BYTE [rY]
+    add DWORD [ADDRESS], eax
+    __NEXT_CYCLE _STA
 
-; STX Z-Page - 86 $xx - 3 Clocks
-; ********************************
-GLOBAL _STXZ, _STXZ2
-_STXZ:
-    __FETCH_ADDRESS_LOW _STXZ2
-_STXZ2:
-    mov BYTE [ADH], 0
+; STX - 86/8E/96
+; ****************
+GLOBAL _STX
+_STX:
     __STORE_RESULT [rX]
 
 ; DEY - 88 - 2 Clocks - N Z
@@ -906,26 +909,6 @@ GLOBAL _TXA
 _TXA:
     mov al, [rX]
     __LOAD_REGISTER [rA]
-
-; STY Abs - 8C $xxxx - 4 Clocks
-; *******************************
-GLOBAL _STYA, _STYA2, _STYA3
-_STYA:
-    __FETCH_ADDRESS_LOW _STYA2
-_STYA2:
-    __FETCH_ADDRESS_HIGH _STYA3
-_STYA3:
-    __STORE_RESULT [rY]
-
-; STX Abs - 8E $xxxx - 4 Clocks
-; *******************************
-GLOBAL _STXA, _STXA2, _STXA3
-_STXA:
-    __FETCH_ADDRESS_LOW _STXA2
-_STXA2:
-    __FETCH_ADDRESS_HIGH _STXA3
-_STXA3:
-    __STORE_RESULT [rX]
 
 ; BCC Imm - 90 #xx - 2/3/4 Clocks -
 ; ***********************************
@@ -988,6 +971,13 @@ _TAX:
 GLOBAL _BCS
 _BCS:
     __BRANCH BYTE [flagC], z
+
+; CLV - B8 - 2 Clocks - V
+; *************************
+GLOBAL _CLV
+_CLV:
+    mov BYTE [flagV], 0
+    __NEXT_CYCLE_FECTH_OPCODE
 
 ; TSX - BA - 2 Clocks - N Z
 ; ***************************
@@ -1126,15 +1116,15 @@ OPCODES:
     DD _BVS,           _ADC + __INDY,  _NIMP,          _NIMP,          _NIMP,          _ADC + __ZPX,   _ROR + __ZPX2,  _NIMP
     DD _SEI,           _ADC + __ABSY,  _NIMP,          _NIMP,          _NIMP,          _ADC + __ABSX,  _ROR + __ABSX2, _NIMP    ; 7
 
-    DD _NIMP,          _NIMP,          _NIMP,          _NIMP,          _STYZ,          _STA + __ZP,    _STXZ,          _NIMP
-    DD _DEY,           _NIMP,          _TXA,           _NIMP,          _STYA,          _STA + __ABS,   _STXA,          _NIMP    ; 8
-    DD _BCC,           _NIMP,          _NIMP,          _NIMP,          _NIMP,          _STA + __ZPX,   _NIMP,          _NIMP
+    DD _NIMP,          _STA + __INDX,  _NIMP,          _NIMP,          _STY + __ZP,    _STA + __ZP,    _STX + __ZP,    _NIMP
+    DD _DEY,           _NIMP,          _TXA,           _NIMP,          _STY + __ABS,   _STA + __ABS,   _STX + __ABS,   _NIMP    ; 8
+    DD _BCC,           _STAIY,         _NIMP,          _NIMP,          _STY + __ZPX,   _STA + __ZPX,   _STX + __ZPY,   _NIMP
     DD _TYA,           _STA + __ABSY2, _TXS,           _NIMP,          _NIMP,          _STA + __ABSX3, _NIMP,          _NIMP    ; 9
 
     DD _LDY + __IMM,   _LDA + __INDX,  _LDX + __IMM,   _NIMP,          _LDY + __ZP,    _LDA + __ZP,    _LDX + __ZP,    _NIMP
     DD _TAY,           _LDA + __IMM,   _TAX,           _NIMP,          _LDY + __ABS,   _LDA + __ABS,   _LDX + __ABS,   _NIMP    ; A
     DD _BCS,           _LDA + __INDY,  _NIMP,          _NIMP,          _LDY + __ZPX,   _LDA + __ZPX,   _LDX + __ZPY,   _NIMP
-    DD _NIMP,          _LDA + __ABSY,  _TSX,           _NIMP,          _LDY + __ABSX,  _LDA + __ABSX,  _LDX + __ABSY,  _NIMP    ; B
+    DD _CLV,           _LDA + __ABSY,  _TSX,           _NIMP,          _LDY + __ABSX,  _LDA + __ABSX,  _LDX + __ABSY,  _NIMP    ; B
 
     DD _CPY + __IMM,   _CMP + __INDX,  _NIMP,          _NIMP,          _CPY + __ZP,    _CMP + __ZP,    _DEC + __ZP2,   _NIMP
     DD _INY,           _CMP + __IMM,   _DEX,           _NIMP,          _CPY + __ABS,   _CMP + __ABS,   _DEC + __ABS2,  _NIMP    ; C
@@ -1164,7 +1154,6 @@ ADDRESSING_MODES:
     DD _ABSY2   ; Absolute, Y (store)
     DD _INDX    ; (Indirect, X)
     DD _INDY    ; (Indirect), Y
-    ;DD _INDYN   ; (Indirect), Y (no boundary check)
 
 
 SECTION .bss

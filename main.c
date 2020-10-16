@@ -54,11 +54,9 @@ int main(int argc, char **argv)
         close(fd);
     }
 
-    int count = 1000000;
-
     initCpu();
     initRIOT();
-    while (count--) {
+    while (1) {
         nextTimerCycle();
         pulseCpu();
     }
