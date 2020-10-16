@@ -35,11 +35,12 @@ __ABS    EQU (7 << 28)
 __ABS2   EQU (8 << 28)
 __ABSX   EQU (9 << 28)
 __ABSX2  EQU (10 << 28)
-__ABSY   EQU (11 << 28)
-__ABSY2  EQU (12 << 28)
-__INDX   EQU (13 << 28)
-__INDY   EQU (14 << 28)
-__INDY2  EQU (15 << 28)
+__ABSX3  EQU (11 << 28)
+__ABSY   EQU (12 << 28)
+__ABSY2  EQU (13 << 28)
+__INDX   EQU (14 << 28)
+__INDY   EQU (15 << 28)
+;__INDY2  EQU (15 << 28)
 
 
 SECTION .text
@@ -407,19 +408,37 @@ _ABSX2_3:
     add DWORD [ADDRESS], eax
     __NEXT_CYCLE _ABS2_3
 
+; * Addressing mode Absolute, X (store)
+; ***************************************
+GLOBAL _ABSX3, _ABSX3_2, _ABSX3_3
+_ABSX3:
+    __FETCH_ADDRESS_LOW _ABSX3_2
+_ABSX3_2:
+    __FETCH_ADDRESS_HIGH _ABSX3_3
+_ABSX3_3:
+    movzx eax, BYTE [rX]
+    add DWORD [ADDRESS], eax
+    __NEXT_CYCLE_ALU
+
 ; * Addressing mode Absolute, Y
 ; *******************************
-GLOBAL _ABSY, _ABSY2
+GLOBAL _ABSY, _ABSY_2
 _ABSY:
-    __FETCH_ADDRESS_LOW _ABSY2
-_ABSY2:
+    __FETCH_ADDRESS_LOW _ABSY_2
+_ABSY_2:
     __FETCH_ADDRESS_HIGH_IBC [rY], _ABSX_3
 
-; * Addressing mode Absolute, Y (no boundary check)
+; * Addressing mode Absolute, Y (store)
 ; ***************************************************
-GLOBAL _ABSYN
-_ABSYN:
-    ; TODO
+GLOBAL _ABSY2
+_ABSY2:
+    __FETCH_ADDRESS_LOW _ABSY2_2
+_ABSY2_2:
+    __FETCH_ADDRESS_HIGH _ABSY2_3
+_ABSY2_3:
+    movzx eax, BYTE [rY]
+    add DWORD [ADDRESS], eax
+    __NEXT_CYCLE_ALU
 
 ; * Addressing mode (Indirect, X)
 ; *********************************
@@ -859,13 +878,10 @@ _STYZ2:
     mov BYTE [ADH], 0
     __STORE_RESULT [rY]
 
-; STA Z-Page - 85 $xx - 3 Clocks
-; ********************************
-GLOBAL _STAZ, _STAZ2
-_STAZ:
-    __FETCH_ADDRESS_LOW _STAZ2
-_STAZ2:
-    mov BYTE [ADH], 0
+; STA - 81/85/8D/91/95/99/9D
+; *****************************
+GLOBAL _STA
+_STA:
     __STORE_RESULT [rA]
 
 ; STX Z-Page - 86 $xx - 3 Clocks
@@ -901,16 +917,6 @@ _STYA2:
 _STYA3:
     __STORE_RESULT [rY]
 
-; STA Abs - 8D $xxxx - 4 Clocks
-; *******************************
-GLOBAL _STAA, _STAA2, _STAA3
-_STAA:
-    __FETCH_ADDRESS_LOW _STAA2
-_STAA2:
-    __FETCH_ADDRESS_HIGH _STAA3
-_STAA3:
-    __STORE_RESULT [rA]
-
 ; STX Abs - 8E $xxxx - 4 Clocks
 ; *******************************
 GLOBAL _STXA, _STXA2, _STXA3
@@ -926,16 +932,6 @@ _STXA3:
 GLOBAL _BCC
 _BCC:
     __BRANCH BYTE [flagC], nz
-
-; STA Z-Page, X - 95 $xx - 4 Clocks
-; ***********************************
-GLOBAL _STAZX, _STAZX2
-_STAZX:
-    __FETCH_ADDRESS_LOW _STAZX2
-_STAZX2:
-    __ADDRESS_LOW_INDEXED [rX]
-    mov BYTE [ADH], 0
-    __NEXT_CYCLE _STAA3
 
 ; TYA - 98 - 2 Clocks - N Z
 ; ***************************
@@ -1130,10 +1126,10 @@ OPCODES:
     DD _BVS,           _ADC + __INDY,  _NIMP,          _NIMP,          _NIMP,          _ADC + __ZPX,   _ROR + __ZPX2,  _NIMP
     DD _SEI,           _ADC + __ABSY,  _NIMP,          _NIMP,          _NIMP,          _ADC + __ABSX,  _ROR + __ABSX2, _NIMP    ; 7
 
-    DD _NIMP,          _NIMP,          _NIMP,          _NIMP,          _STYZ,          _STAZ,          _STXZ,          _NIMP
-    DD _DEY,           _NIMP,          _TXA,           _NIMP,          _STYA,          _STAA,          _STXA,          _NIMP    ; 8
-    DD _BCC,           _NIMP,          _NIMP,          _NIMP,          _NIMP,          _STAZX,         _NIMP,          _NIMP
-    DD _TYA,           _NIMP,          _TXS,           _NIMP,          _NIMP,          _NIMP,          _NIMP,          _NIMP    ; 9
+    DD _NIMP,          _NIMP,          _NIMP,          _NIMP,          _STYZ,          _STA + __ZP,    _STXZ,          _NIMP
+    DD _DEY,           _NIMP,          _TXA,           _NIMP,          _STYA,          _STA + __ABS,   _STXA,          _NIMP    ; 8
+    DD _BCC,           _NIMP,          _NIMP,          _NIMP,          _NIMP,          _STA + __ZPX,   _NIMP,          _NIMP
+    DD _TYA,           _STA + __ABSY2, _TXS,           _NIMP,          _NIMP,          _STA + __ABSX3, _NIMP,          _NIMP    ; 9
 
     DD _LDY + __IMM,   _LDA + __INDX,  _LDX + __IMM,   _NIMP,          _LDY + __ZP,    _LDA + __ZP,    _LDX + __ZP,    _NIMP
     DD _TAY,           _LDA + __IMM,   _TAX,           _NIMP,          _LDY + __ABS,   _LDA + __ABS,   _LDX + __ABS,   _NIMP    ; A
@@ -1163,11 +1159,12 @@ ADDRESSING_MODES:
     DD _ABS2    ; Absolute (c=2)
     DD _ABSX    ; Absolute, X
     DD _ABSX2   ; Absolute, X (c=2)
+    DD _ABSX3   ; Absolute, X (store)
     DD _ABSY    ; Absolute, Y
-    DD _ABSYN   ; Absolute, Y (no boundary check)
+    DD _ABSY2   ; Absolute, Y (store)
     DD _INDX    ; (Indirect, X)
     DD _INDY    ; (Indirect), Y
-    DD _INDYN   ; (Indirect), Y (no boundary check)
+    ;DD _INDYN   ; (Indirect), Y (no boundary check)
 
 
 SECTION .bss
