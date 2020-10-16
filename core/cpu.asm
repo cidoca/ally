@@ -176,13 +176,13 @@ loadFlags:
 ; * Fetch high address byte from Program Counter
 ; * indexed with boundary check
 ; ************************************************
-%MACRO __FETCH_ADDRESS_HIGH_IBC 3
+%MACRO __FETCH_ADDRESS_HIGH_IBC 2
     __FETCH_NEXT_BYTE
     mov [ADH], al
     __ADDRESS_LOW_INDEXED %1
     jnc %%A
     __NEXT_CYCLE %2
-%%A:__NEXT_CYCLE %3
+%%A:__NEXT_CYCLE_ALU
 %ENDMACRO
 
 ; * Read memory from address register
@@ -308,17 +308,19 @@ loadFlags:
 ; *****************************
 GLOBAL _IMM
 _IMM:
-    __FETCH_NEXT_BYTE
+    mov eax, [programCounter]
+    inc DWORD [programCounter]
+    mov [ADDRESS], eax
     __JUMP_MNEMONIC
 
 ; * Addressing mode Z-Page
 ; **************************
-GLOBAL _ZP, _ZP_2
+GLOBAL _ZP
 _ZP:
-    __FETCH_ADDRESS_LOW _ZP_2
-_ZP_2:
-    __READ_ZERO_PAGE
-    __JUMP_MNEMONIC
+    __FETCH_NEXT_BYTE
+    mov [ADL], al
+    mov BYTE [ADH], 0
+    __NEXT_CYCLE_ALU
 
 ; * Addressing mode Z-Page (c=2)
 ; ********************************
@@ -334,10 +336,13 @@ _ZP2_2:
 ; *****************************
 GLOBAL _ZPX, _ZPX_2
 _ZPX:
-    __FETCH_ADDRESS_LOW _ZPX_2
+    __FETCH_NEXT_BYTE
+    mov [ADL], al
+    mov BYTE [ADH], 0
+    __NEXT_CYCLE _ZPX_2
 _ZPX_2:
     __ADDRESS_LOW_INDEXED [rX]
-    __NEXT_CYCLE _ZP_2
+    __NEXT_CYCLE_ALU
 
 ; * Addressing mode Z-Page, X (c=2)
 ; ***********************************
@@ -355,18 +360,17 @@ _ZPY:
     __FETCH_ADDRESS_LOW _ZPY2
 _ZPY2:
     __ADDRESS_LOW_INDEXED [rY]
-    __NEXT_CYCLE _ZP_2
+    __NEXT_CYCLE_ALU
 
 ; * Addressing mode Absolute
 ; ****************************
-GLOBAL _ABS, _ABS_2, _ABS_3
+GLOBAL _ABS, _ABS_2
 _ABS:
     __FETCH_ADDRESS_LOW _ABS_2
 _ABS_2:
-    __FETCH_ADDRESS_HIGH _ABS_3
-_ABS_3:
-    __READ_MEMORY
-    __JUMP_MNEMONIC
+    __FETCH_NEXT_BYTE
+    mov [ADH], al
+    __NEXT_CYCLE_ALU
 
 ; * Addressing mode Absolute (c=2)
 ; **********************************
@@ -386,10 +390,10 @@ GLOBAL _ABSX, _ABSX_2, _ABSX_3
 _ABSX:
     __FETCH_ADDRESS_LOW _ABSX_2
 _ABSX_2:
-    __FETCH_ADDRESS_HIGH_IBC [rX], _ABSX_3, _ABS_3
+    __FETCH_ADDRESS_HIGH_IBC [rX], _ABSX_3
 _ABSX_3:
     inc BYTE [ADH]
-    __NEXT_CYCLE _ABS_3
+    __NEXT_CYCLE_ALU
 
 ; * Addressing mode Absolute, X (c=2)
 ; *************************************
@@ -409,7 +413,7 @@ GLOBAL _ABSY, _ABSY2
 _ABSY:
     __FETCH_ADDRESS_LOW _ABSY2
 _ABSY2:
-    __FETCH_ADDRESS_HIGH_IBC [rX], _ABSX_3, _ABS_3
+    __FETCH_ADDRESS_HIGH_IBC [rY], _ABSX_3
 
 ; * Addressing mode Absolute, Y (no boundary check)
 ; ***************************************************
@@ -436,7 +440,7 @@ _INDX4:
     mov [ADH], al
     mov al, [DATA_BUFFER]
     mov [ADL], al
-    __NEXT_CYCLE _ABS_3
+    __NEXT_CYCLE_ALU
 
 ; * Addressing mode (Indirect), Y
 ; *********************************
@@ -457,7 +461,7 @@ _INDY3:
     jnc _INDY4
     __NEXT_CYCLE _ABSX_3
 _INDY4:
-    __NEXT_CYCLE _ABS_3
+    __NEXT_CYCLE_ALU
 
 ; * Addressing mode (Indirect), Y (no bounday check)
 ; ****************************************************
@@ -526,6 +530,7 @@ _BRANCH2:
 ;  ************************************
 GLOBAL _ORA
 _ORA:
+    __READ_MEMORY
     or [rA], al
     sets [flagN]
     setz [flagZ]
@@ -609,6 +614,7 @@ _JSRA5:
 ; *************************************
 GLOBAL _AND
 _AND:
+    __READ_MEMORY
     and [rA], al
     sets [flagN]
     setz [flagZ]
@@ -675,6 +681,7 @@ _SEC:
 ; *************************************
 GLOBAL _EOR
 _EOR:
+    __READ_MEMORY
     xor [rA], al
     sets [flagN]
     setz [flagZ]
@@ -766,6 +773,7 @@ _RTS5:
 ; *****************************************
 GLOBAL _ADC
 _ADC:
+    __READ_MEMORY
     test BYTE [flagD], 1
     jnz _ADC2
     shr BYTE [flagC], 1
@@ -948,18 +956,21 @@ _TXS:
 ; **************************
 GLOBAL _LDY
 _LDY:
+    __READ_MEMORY
     __LOAD_REGISTER [rY]
 
 ; LDA - A1/A5/A9/AD/B1/B5/B9/BD - N Z
 ; *************************************
 GLOBAL _LDA
 _LDA:
+    __READ_MEMORY
     __LOAD_REGISTER [rA]
 
 ; LDX - A2/A6/AE/B6/BE - N Z
 ; ****************************
 GLOBAL _LDX
 _LDX:
+    __READ_MEMORY
     __LOAD_REGISTER [rX]
 
 ; TAY - A8 - 2 Clocks - N Z
@@ -993,12 +1004,14 @@ _TSX:
 ; ************************
 GLOBAL _CPY
 _CPY:
+    __READ_MEMORY
     __CMP [rY]
 
 ; CMP - C1/C5/C9/CD/D1/D5/D9/DD - N Z C
 ; ***************************************
 GLOBAL _CMP
 _CMP:
+    __READ_MEMORY
     __CMP [rA]
 
 ; DEC - C6/CE/D6/DE - N Z
@@ -1039,12 +1052,14 @@ _CLD:
 ; ************************
 GLOBAL _CPX
 _CPX:
+    __READ_MEMORY
     __CMP [rX]
 
 ; SBC - E1/E5/E9/ED/F1/F5/F9/FD - N V Z C
 ; *****************************************
 GLOBAL _SBC
 _SBC:
+    __READ_MEMORY
     xor BYTE [flagC], 1
     test BYTE [flagD], 1
     jnz _SBC2
