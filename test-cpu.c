@@ -703,8 +703,8 @@ void runTest(const CPU_INSTRUCTION *i) {
             printError(n, "ADH", c->ADH, ADH);
             return;
         }
-        if (c->flags & F_DR && dataRegister != c->DR) {
-            printError(n, "DR", c->DR, dataRegister);
+        if (c->flags & F_DR && DATA_BUFFER != c->DR) {
+            printError(n, "DR", c->DR, DATA_BUFFER);
             return;
         }
         if (c->flags & F_RA && rA != c->rA) {
