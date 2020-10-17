@@ -15,7 +15,7 @@
 ; along with this program.  If not, see [http://www.gnu.org/licenses/].
 
 %IFNDEF RELEASE
-EXTERN writingIO, readingIntFlag, writingEdgeDetectControl
+EXTERN writingIO, readingIntFlag, writingEdgeDetectControl, writingRAM, readingIO
 %ENDIF
 
 SECTION .text
@@ -39,12 +39,13 @@ GLOBAL nextTimerCycle
 nextTimerCycle:
     ; TODO: After interrupt flag, don't cross 0
     dec DWORD [TIMER]
-    jns NTC
+    jns NTCX
 
     mov BYTE [TIMER_DIV], 0
     or BYTE [TIMER_FLAG], 080h
 
-NTC:ret
+NTCX:
+    ret
 
 ; * Read from memory RAM 080h - 0FFh
 ; ************************************
@@ -58,6 +59,18 @@ readRAM:
 ; ***********************************
 GLOBAL writeRAM
 writeRAM:
+;%IFNDEF RELEASE
+%IFDEF XXXX
+    push rax
+    push rdi
+    push rsi
+    mov rdi, rsi
+    mov esi, eax
+    call writingRAM
+    pop rsi
+    pop rdi
+    pop rax
+%ENDIF
     and esi, 07Fh
     mov [RAM+rsi], al
     ret
@@ -67,6 +80,14 @@ writeRAM:
 GLOBAL readIO
 readIO:
     and esi, 3
+%IFNDEF RELEASE
+    push rdi
+    push rsi
+    mov rdi, rsi
+    call readingIO
+    pop rsi
+    pop rdi
+%ENDIF
     mov al, [PORTA+rsi]
     ret
 
@@ -76,9 +97,11 @@ readIO:
 GLOBAL writeIO
 writeIO:
 %IFNDEF RELEASE
+    push rdi
     mov rdi, rsi
     movzx esi, al
     call writingIO
+    pop rdi
 %ENDIF
     ret
 
@@ -98,7 +121,9 @@ readTimer:
 
 readInterruptFLag:  ; Should never happen ????
 %IFNDEF RELEASE
+    push rdi
     call readingIntFlag
+    pop rdi
 %ENDIF
     mov al, [TIMER_FLAG]
     ret
@@ -122,9 +147,11 @@ writeTimer:
 
 writeEdgeDetectControl: ; Should never happen ????
 %IFNDEF RELEASE
+    push rdi
     mov rdi, rsi
     movzx esi, al
     call writingEdgeDetectControl
+    pop rdi
 %ENDIF
     ret
 

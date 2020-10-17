@@ -22,6 +22,8 @@
 EXTERN opcodeNotImplemented, d6502
 %ENDIF
 
+EXTERN NTC
+
 ; * Addressing modes
 ; ********************
 __IMP    EQU (0 << 28)
@@ -43,13 +45,6 @@ __INDY   EQU (15 << 28)
 
 
 SECTION .text
-
-GLOBAL pulseCpu
-pulseCpu:
-    mov edx, [nextCpuCycle]
-    jmp rdx
-NTC:
-    ret
 
 ; * Initialize CPU
 ; ******************
@@ -499,14 +494,18 @@ _FETCH_OPCODE:
     mov eax, [OPCODES+eax*4]
 
 %IFNDEF RELEASE
+    push rdi
     push rax
     call d6502
     pop rax
+    pop rdi
     cmp eax, _NIMP
     jne _FO
+    push rdi
     push rax
     call opcodeNotImplemented
     pop rax
+    pop rdi
 _FO:
 %ENDIF
 
@@ -641,6 +640,7 @@ _AND:
 ; *******************
 GLOBAL _BIT
 _BIT:
+    __READ_MEMORY
     test al, 010000000b
     setnz [flagN]
     test al, 001000000b

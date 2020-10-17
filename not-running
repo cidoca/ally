@@ -1,0 +1,10 @@
+clean frames, no vblank, no vsync
+  e_t, zoofunc
+
+vblank late
+  spidrman, demonatk
+
+no vblank
+  crosfrce
+
+

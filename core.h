@@ -17,8 +17,12 @@
 */
 
 extern unsigned char ROM[];
+extern unsigned int SCANLINE;
+extern unsigned char CLOCKCOUNTS;
 
 void initCpu();
 void pulseCpu();
 void initRIOT();
 void nextTimerCycle();
+void initTIA();
+void renderFrame(void *);

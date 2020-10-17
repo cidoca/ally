@@ -8,7 +8,7 @@ CC=gcc
 CFLAGS=-O0 -g -Wall `sdl2-config --cflags`
 LIBS=`sdl2-config --libs`
 
-all: $(TARGET) test-cpu
+#all: $(TARGET) test-cpu
 
 $(TARGET): $(LIBCORE) $(OBJECTS)
 	@echo Linking executable $@
