@@ -54,7 +54,7 @@ void writingInvalidTIA(int address, int value) {
     if (
         address == 0x00
         || address == 0x01
-        || address == 0x02
+        || address == 0x03
     )
     printf("#### Writing TIA: %02X <- %02X  S/C: %d/%d\n", address, value & 0xff, SCANLINE, CLOCKCOUNTS);
 }
@@ -66,7 +66,7 @@ void writingRAM(int address, int value) {
 
 void readingIO(int address) {
 //    if (address & 0xFF == 0x99)
-    printf("#### Reading IO: %02X S/C: %d/%d\n", address, SCANLINE, CLOCKCOUNTS);
+//    printf("#### Reading IO: %02X S/C: %d/%d\n", address, SCANLINE, CLOCKCOUNTS);
 }
 
 void initSDL(char *filename)
@@ -83,7 +83,7 @@ void initSDL(char *filename)
     win = SDL_CreateWindow(title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1140, 900, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
     renderer = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED);
     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1");
-    texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, 228, 360); // 160, 192);
+    texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, 228, 361); // 160, 192);
 
     // Setup keyboard and joysticks
     keys = (Uint8*)SDL_GetKeyboardState(NULL);
@@ -159,14 +159,14 @@ void mainLoop()
 
         printf("*** NEW FRAME ***\n");
         SDL_LockTexture(texture, NULL, &frameBuffer, &pitch);
-        renderFrame(frameBuffer);
+        scanFrame(frameBuffer);
         SDL_UnlockTexture(texture);
         SDL_RenderCopy(renderer, texture, NULL, NULL);
         SDL_RenderPresent(renderer);
 
 //        t2 = SDL_GetTicks();
 //        printf("%d\n", t2 - t1);
-        SDL_Delay(160);
+        SDL_Delay(16);
 //        t1 = t2;
     }
 }

@@ -26,13 +26,19 @@ SECTION .text
 
 ; * Render one frame
 ; ********************
-GLOBAL renderFrame, NTC
-renderFrame:
+GLOBAL scanFrame, NTC
+scanFrame:
+%IFNDEF RELEASE
     mov eax, 0FF00h
     mov ecx, 228 * 360
     push rdi
     rep stosd
     pop rdi
+%ENDIF
+
+    movzx eax, BYTE [CLOCKCOUNTS]
+    shl eax, 2
+    add rdi, rax
 
     mov BYTE [TIA+VSYNC], 0
     mov DWORD [SCANLINE], 0
@@ -52,13 +58,12 @@ CNT:
     jnz NTC
     mov edx, [nextCpuCycle]
     jmp rdx
-NTC:
 
+NTC:
     test BYTE [TIA+VSYNC], VSYNC_BIT        ; New frame
     jnz endFrame
 
 NTC2:
-
     inc BYTE [CLOCKCOUNTS]
     cmp BYTE [CLOCKCOUNTS], 228
     jb pulseTIA
@@ -73,17 +78,57 @@ endFrame:
     ret
 
 drawBG:
-    ;cmp BYTE [CLOCKCOUNTS], 68
-    ;jb CNT
-
-    mov eax, 0FF00FFh
-    test BYTE [TIA+VBLANK], VBLANK_VERTBLANK
-    jnz DBG2
-    cmp BYTE [CLOCKCOUNTS], 68
-    jb DBG2
+    mov eax, [COLOR_BK]                 ; Background color
     
-    movzx eax, BYTE [TIA+COLUBK]
-    mov eax, [PALETTE+eax*2]
+    cmp BYTE [CLOCKCOUNTS], 68
+    jb DBG1
+
+    ; Playfield
+    movzx edx, BYTE [CLOCKCOUNTS]
+    sub edx, 68
+    shr edx, 2
+    test BYTE [TIA+CTRLPF], CTRLPF_REF
+    jnz PF_REF
+    mov edx, [PLAYFIELD_TABLE+edx*4]
+    jmp PF_TEST
+PF_REF:
+    mov edx, [PLAYFIELD_TABLE_REF+edx*4]
+PF_TEST:
+    test DWORD [TIA+PF0], edx
+    jz PFX
+    mov eax, [COLOR_PF] ; TODO: get right color checking CTRLPF
+PFX:
+
+DBG1:
+
+%IFNDEF RELEASE
+    test BYTE [TIA+VBLANK], VBLANK_VERTBLANK
+    jnz PURPLE
+    cmp BYTE [CLOCKCOUNTS], 68
+    jb PURPLE
+    jmp DBG2
+
+PURPLE:
+    mov edx, eax
+    shr edx, 16
+    add edx, 0FFh
+    shr edx, 1
+    mov esi, edx
+    shl esi, 8
+
+    mov edx, eax
+    shr edx, 8
+    and edx, 0FFh
+    shr edx, 1
+    or esi, edx
+    shl esi, 8
+
+    and eax, 0FFh
+    add eax, 0FFh
+    shr eax, 1
+    or eax, esi
+%ENDIF
+
 DBG2:
     mov [rdi], eax
     add rdi, 4
@@ -112,6 +157,23 @@ PALETTE:
     DD 0283000h, 0485018h, 0687030h, 0808C48h, 098A860h, 0B0C078h, 0C8D488h, 0E0EC98h
     DD 0402800h, 0604818h, 0806830h, 0A08440h, 0B89C58h, 0D0B468h, 0E8CC78h, 0F8E088h
 
+GLOBAL PLAYFIELD_MASK
+PLAYFIELD_TABLE:
+    DD 000010h, 000020h, 000040h, 000080h
+    DD 008000h, 004000h, 002000h, 001000h, 000800h, 000400h, 000200h, 000100h
+    DD 010000h, 020000h, 040000h, 080000h, 100000h, 200000h, 400000h, 800000h
+    DD 000010h, 000020h, 000040h, 000080h
+    DD 008000h, 004000h, 002000h, 001000h, 000800h, 000400h, 000200h, 000100h
+    DD 010000h, 020000h, 040000h, 080000h, 100000h, 200000h, 400000h, 800000h
+
+GLOBAL PLAYFIELD_TABLE_REF
+PLAYFIELD_TABLE_REF:
+    DD 000010h, 000020h, 000040h, 000080h
+    DD 008000h, 004000h, 002000h, 001000h, 000800h, 000400h, 000200h, 000100h
+    DD 010000h, 020000h, 040000h, 080000h, 100000h, 200000h, 400000h, 800000h
+    DD 800000h, 400000h, 200000h, 100000h, 080000h, 040000h, 020000h, 010000h
+    DD 000100h, 000200h, 000400h, 000800h, 001000h, 002000h, 004000h, 008000h
+    DD 000080h, 000040h, 000020h, 000010h
 
 SECTION .bss
 
@@ -119,3 +181,7 @@ GLOBAL SCANLINE, CLOCKCOUNTS, CLOCKO2
 SCANLINE    RESD 1
 CLOCKCOUNTS RESB 1
 CLOCKO2     RESB 1
+
+GLOBAL COLOR_PF, COLOR_BK
+COLOR_PF    RESD 1
+COLOR_BK    RESD 1

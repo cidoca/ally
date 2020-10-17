@@ -25,4 +25,4 @@ void pulseCpu();
 void initRIOT();
 void nextTimerCycle();
 void initTIA();
-void renderFrame(void *);
+void scanFrame(void *);

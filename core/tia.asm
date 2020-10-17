@@ -19,7 +19,7 @@ EXTERN readingInvalidTIA, writingInvalidTIA
 %ENDIF
 
 %INCLUDE "tia_registers.inc"
-EXTERN CLOCKO2, CLOCKCOUNTS, SCANLINE
+%INCLUDE "frame.inc"
 
 SECTION .text
 
@@ -34,6 +34,7 @@ initTIA:
 
     mov BYTE [CLOCKO2], 1
     mov BYTE [CLOCKCOUNTS], 0
+    mov DWORD [COLOR_BK], 0
     ret
 
 ; * Read from TIA registers 00h - 0Dh
@@ -101,6 +102,20 @@ _WSYNC:
     mov BYTE [TIA+WSYNC], 1
     ret
 
+GLOBAL _COLUPF
+_COLUPF:
+    and eax, 0FEh
+    mov eax, [PALETTE+eax*2]
+    mov [COLOR_PF], eax
+    ret
+
+GLOBAL _COLUBK
+_COLUBK:
+    and eax, 0FEh
+    mov eax, [PALETTE+eax*2]
+    mov [COLOR_BK], eax
+    ret
+
 ; * Clears all horizontal motion registers to zero (no motion) - 2B
 ; *******************************************************************
 GLOBAL _HMCLR
@@ -125,7 +140,7 @@ GLOBAL TIA_REGISTERS
 TIA_REGISTERS:
     ;    0/8      1/9      2/A      3/B      4/C      5/D      6/E      7/F
     DD _WREG,   _WREG,   _WSYNC,  _RNIMP,  _WREG,   _WREG,   _WREG,   _WREG
-    DD _WREG,   _WREG,   _WREG,   _WREG,   _WREG,   _WREG,   _WREG,   _WREG     ; 0
+    DD _COLUPF, _COLUBK, _WREG,   _WREG,   _WREG,   _WREG,   _WREG,   _WREG     ; 0
     DD _RNIMP,  _RNIMP,  _RNIMP,  _RNIMP,  _RNIMP,  _WREG,   _WREG,   _WREG
     DD _WREG,   _WREG,   _WREG,   _WREG,   _WREG,   _WREG,   _WREG,   _WREG     ; 1
     DD _WREG,   _WREG,   _WREG,   _WREG,   _WREG,   _WREG,   _WREG,   _WREG
