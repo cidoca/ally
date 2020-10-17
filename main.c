@@ -142,11 +142,38 @@ void openROM(char *filename)
     initTIA();
 }
 
+void getControls()
+{
+    PORTA = 0xFF;
+    PORTB = 0x3F;
+    INPT4 = 0x80;
+
+    // Player 0
+    if (keys[SDL_SCANCODE_RIGHT])
+        PORTA &= ~0x80;
+    if (keys[SDL_SCANCODE_LEFT])
+        PORTA &= ~0x40;
+    if (keys[SDL_SCANCODE_DOWN])
+        PORTA &= ~0x20;
+    if (keys[SDL_SCANCODE_UP])
+        PORTA &= ~0x10;
+    if (keys[SDL_SCANCODE_LCTRL])
+        PORTA &= ~0x80;
+
+    // Reset
+    if (keys[SDL_SCANCODE_ESCAPE])
+        PORTB &= ~0x01;
+
+    // Select
+    if (keys[SDL_SCANCODE_TAB])
+        PORTB &= ~0x02;
+}
+
 void mainLoop()
 {
     SDL_Event event;
     void *frameBuffer;
-    unsigned int t1, t2;
+//    unsigned int t1, t2;
     int done = 0, pitch;
 
 //    t1 = SDL_GetTicks();
@@ -158,6 +185,7 @@ void mainLoop()
         }
 
         printf("*** NEW FRAME ***\n");
+        getControls();
         SDL_LockTexture(texture, NULL, &frameBuffer, &pitch);
         scanFrame(frameBuffer);
         SDL_UnlockTexture(texture);

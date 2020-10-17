@@ -19,6 +19,7 @@
 extern unsigned char ROM[];
 extern unsigned int SCANLINE;
 extern unsigned char CLOCKCOUNTS;
+extern unsigned char PORTA, PORTB, INPT4, INPT5;
 
 void initCpu();
 void pulseCpu();
