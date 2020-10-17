@@ -797,7 +797,31 @@ _ADC:
     seto [flagV]
     setz [flagZ]
     setc [flagC]
-_ADC2:    ; TODO: implement opcode with flagD
+    __NEXT_CYCLE_FECTH_OPCODE
+_ADC2:
+    shr BYTE [flagC], 1
+    adc [rA], al
+    lahf
+    test ah, 10h
+    jnz _ADC3
+    mov al, [rA]
+    and al, 0Fh
+    cmp al, 10
+    jb _ADC4
+_ADC3:
+    add BYTE [rA], 6
+    jc _ADC5
+_ADC4:
+    test ah, 1h
+    jnz _ADC5
+    mov al, [rA]
+    and al, 0F0h
+    cmp al, 0A0h
+    jb _ADC6
+_ADC5:
+    mov BYTE [flagC], 1
+    add BYTE [rA], 060h
+_ADC6:
     __NEXT_CYCLE_FECTH_OPCODE
 
 ; ROR - 66/6A/6E/76/7E - N Z C
@@ -1055,7 +1079,27 @@ _SBC:
     seto [flagV]
     setz [flagZ]
     setnc [flagC]
-_SBC2:    ; TODO: implement opcode with flagD
+    __NEXT_CYCLE_FECTH_OPCODE
+
+_SBC2:
+    shr BYTE [flagC], 1
+    sbb [rA], al
+    lahf
+    jnc _SBC4
+    test ah, 10h
+    jz _SBC3
+    add BYTE [rA], 09Ah
+    jmp _SBC5
+_SBC3:
+    add BYTE [rA], 0A0h
+    jmp _SBC5
+_SBC4:
+    test ah, 10h
+    jz _SBC5
+    add BYTE [rA], 0FAh
+_SBC5:
+    test ah, 01h
+    setz [flagC]
     __NEXT_CYCLE_FECTH_OPCODE
 
 ; INC - E6/EE/F6/FE - N Z

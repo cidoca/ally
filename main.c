@@ -166,7 +166,7 @@ void mainLoop()
 
 //        t2 = SDL_GetTicks();
 //        printf("%d\n", t2 - t1);
-        SDL_Delay(16);
+        SDL_Delay(200);
 //        t1 = t2;
     }
 }
