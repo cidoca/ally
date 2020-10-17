@@ -96,7 +96,17 @@ PF_REF:
 PF_TEST:
     test DWORD [TIA+PF0], edx
     jz PFX
-    mov eax, [COLOR_PF] ; TODO: get right color checking CTRLPF
+    test BYTE [TIA+CTRLPF], CTRLPF_SCORE
+    jnz PF_P
+    mov eax, [COLOR_PF]
+    jmp PFX
+PF_P:
+    cmp BYTE [CLOCKCOUNTS], 68 + 80
+    jae PF_P1
+    mov eax, [COLOR_P0]
+    jmp PFX
+PF_P1:
+    mov eax, [COLOR_P1]
 PFX:
 
 DBG1:
@@ -182,6 +192,8 @@ SCANLINE    RESD 1
 CLOCKCOUNTS RESB 1
 CLOCKO2     RESB 1
 
-GLOBAL COLOR_PF, COLOR_BK
+GLOBAL COLOR_P0, COLOR_P1, COLOR_PF, COLOR_BK
+COLOR_P0    RESD 1
+COLOR_P1    RESD 1
 COLOR_PF    RESD 1
 COLOR_BK    RESD 1

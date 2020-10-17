@@ -102,6 +102,20 @@ _WSYNC:
     mov BYTE [TIA+WSYNC], 1
     ret
 
+GLOBAL _COLUP0
+_COLUP0:
+    and eax, 0FEh
+    mov eax, [PALETTE+eax*2]
+    mov [COLOR_P0], eax
+    ret
+
+GLOBAL _COLUP1
+_COLUP1:
+    and eax, 0FEh
+    mov eax, [PALETTE+eax*2]
+    mov [COLOR_P1], eax
+    ret
+
 GLOBAL _COLUPF
 _COLUPF:
     and eax, 0FEh
@@ -139,7 +153,7 @@ SECTION .data
 GLOBAL TIA_REGISTERS
 TIA_REGISTERS:
     ;    0/8      1/9      2/A      3/B      4/C      5/D      6/E      7/F
-    DD _WREG,   _WREG,   _WSYNC,  _RNIMP,  _WREG,   _WREG,   _WREG,   _WREG
+    DD _WREG,   _WREG,   _WSYNC,  _RNIMP,  _WREG,   _WREG,   _COLUP0, _COLUP1
     DD _COLUPF, _COLUBK, _WREG,   _WREG,   _WREG,   _WREG,   _WREG,   _WREG     ; 0
     DD _RNIMP,  _RNIMP,  _RNIMP,  _RNIMP,  _RNIMP,  _WREG,   _WREG,   _WREG
     DD _WREG,   _WREG,   _WREG,   _WREG,   _WREG,   _WREG,   _WREG,   _WREG     ; 1
