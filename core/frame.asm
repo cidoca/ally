@@ -46,6 +46,8 @@ scanFrame:
 newLine:
 
 pulseTIA:
+    test BYTE [TIA+VSYNC], VSYNC_BIT        ; New frame
+    jnz endFrame
     jmp drawBG
 CNT:    
 
@@ -60,8 +62,6 @@ CNT:
     jmp rdx
 
 NTC:
-    test BYTE [TIA+VSYNC], VSYNC_BIT        ; New frame
-    jnz endFrame
 
 NTC2:
     inc BYTE [CLOCKCOUNTS]
@@ -108,6 +108,18 @@ PF_P:
 PF_P1:
     mov eax, [COLOR_P1]
 PFX:
+
+    ; Ball
+    test BYTE [TIA+ENABL], ENA_BIT
+    jz BLX
+    mov dl, [POSITION_BL]
+    cmp [CLOCKCOUNTS], dl
+    jb BLX
+    add dl, [SIZE_BL]
+    cmp [CLOCKCOUNTS], dl
+    jae BLX
+    mov eax, [COLOR_PF]
+BLX:
 
 DBG1:
 
@@ -197,3 +209,7 @@ COLOR_P0    RESD 1
 COLOR_P1    RESD 1
 COLOR_PF    RESD 1
 COLOR_BK    RESD 1
+
+GLOBAL POSITION_BL, SIZE_BL
+POSITION_BL RESB 1
+SIZE_BL     RESB 1

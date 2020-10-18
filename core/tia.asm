@@ -34,7 +34,6 @@ initTIA:
 
     mov BYTE [CLOCKO2], 1
     mov BYTE [CLOCKCOUNTS], 0
-    mov DWORD [COLOR_BK], 0
     ret
 
 ; * Read from TIA registers 00h - 0Dh
@@ -86,13 +85,6 @@ _RNIMP:
 GLOBAL _WREG
 _WREG:
     mov [TIA+rsi], al
-;%IFNDEF RELEASE
-;    push rdi
-;    mov rdi, rsi
-;    mov rsi, rax
-;    call writingInvalidTIA
-;    pop rdi
-;%ENDIF
     ret
 
 ; * Halts CPU until reaches the right edge of the screen - 02
@@ -130,6 +122,39 @@ _COLUBK:
     mov [COLOR_BK], eax
     ret
 
+GLOBAL _CTRLPF
+_CTRLPF:
+    mov BYTE [TIA+CTRLPF], al
+    mov cl, al
+    shr cl, 4
+    and cl, 3
+    mov al, 1
+    shl al, cl
+    mov [SIZE_BL], al
+    ret
+
+GLOBAL _RESBL
+_RESBL:
+    mov al, [CLOCKCOUNTS]
+    cmp al, 68
+    jb RBL0
+    ;add al, 4         ; ????????????
+    ;add al, [SIZE_BL] ; ????????????
+    mov [POSITION_BL], al
+    ret
+RBL0:
+    mov BYTE [POSITION_BL], 68
+    ret
+
+; * 
+GLOBAL _HMOVE
+_HMOVE:
+    mov al, [TIA+HMBL]
+    sar al, 4
+    sub [POSITION_BL], al
+    ;mov BYTE [TIA+HMOVE], 1
+    ret
+
 ; * Clears all horizontal motion registers to zero (no motion) - 2B
 ; *******************************************************************
 GLOBAL _HMCLR
@@ -154,11 +179,11 @@ GLOBAL TIA_REGISTERS
 TIA_REGISTERS:
     ;    0/8      1/9      2/A      3/B      4/C      5/D      6/E      7/F
     DD _WREG,   _WREG,   _WSYNC,  _RNIMP,  _WREG,   _WREG,   _COLUP0, _COLUP1
-    DD _COLUPF, _COLUBK, _WREG,   _WREG,   _WREG,   _WREG,   _WREG,   _WREG     ; 0
-    DD _RNIMP,  _RNIMP,  _RNIMP,  _RNIMP,  _RNIMP,  _WREG,   _WREG,   _WREG
+    DD _COLUPF, _COLUBK, _CTRLPF, _WREG,   _WREG,   _WREG,   _WREG,   _WREG     ; 0
+    DD _RNIMP,  _RNIMP,  _RNIMP,  _RNIMP,  _RESBL,  _WREG,   _WREG,   _WREG
     DD _WREG,   _WREG,   _WREG,   _WREG,   _WREG,   _WREG,   _WREG,   _WREG     ; 1
     DD _WREG,   _WREG,   _WREG,   _WREG,   _WREG,   _WREG,   _WREG,   _WREG
-    DD _WREG,   _WREG,   _RNIMP,  _HMCLR,  _CXCLR,  _RNIMP,  _RNIMP,  _RNIMP    ; 2
+    DD _WREG,   _WREG,   _HMOVE,  _HMCLR,  _CXCLR,  _RNIMP,  _RNIMP,  _RNIMP    ; 2
     DD _RNIMP,  _RNIMP,  _RNIMP,  _RNIMP,  _RNIMP,  _RNIMP,  _RNIMP,  _RNIMP
     DD _RNIMP,  _RNIMP,  _RNIMP,  _RNIMP,  _RNIMP,  _RNIMP,  _RNIMP,  _RNIMP    ; 3
 

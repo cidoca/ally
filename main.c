@@ -158,7 +158,7 @@ void getControls()
     if (keys[SDL_SCANCODE_UP])
         PORTA &= ~0x10;
     if (keys[SDL_SCANCODE_LCTRL])
-        PORTA &= ~0x80;
+        PORTB &= ~0x80;
 
     // Reset
     if (keys[SDL_SCANCODE_ESCAPE])

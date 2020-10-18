@@ -15,7 +15,7 @@
 ; along with this program.  If not, see [http://www.gnu.org/licenses/].
 
 %IFNDEF RELEASE
-EXTERN writingIO, readingIntFlag, writingEdgeDetectControl, writingRAM, readingIO
+EXTERN writingIO, writingEdgeDetectControl, writingRAM, readingIO
 %ENDIF
 
 SECTION .text
@@ -28,7 +28,7 @@ initRIOT:
     mov BYTE [DDRA], 0
     mov BYTE [PORTB], 03Fh
     mov BYTE [DDRB], 0
-    mov DWORD [TIMER], 0FFFFFFFFh
+    mov DWORD [TIMER], 0FFFFFF00h
     mov BYTE [TIMER_DIV], 0
     mov BYTE [TIMER_FLAG], 0
     ret
@@ -37,14 +37,15 @@ initRIOT:
 ; *********************************************
 GLOBAL nextTimerCycle
 nextTimerCycle:
-    ; TODO: After interrupt flag, don't cross 0
-    dec DWORD [TIMER]
-    jns NTCX
-
+    cmp DWORD [TIMER], 0
+    jne NZ
+    mov BYTE [TIMER_FLAG], 080h
     mov BYTE [TIMER_DIV], 0
-    or BYTE [TIMER_FLAG], 080h
-
-NTCX:
+NZ:
+    cmp DWORD [TIMER], 0FFFFFF00h
+    je NR
+    dec DWORD [TIMER]
+NR:
     ret
 
 ; * Read from memory RAM 080h - 0FFh
@@ -80,7 +81,8 @@ writeRAM:
 GLOBAL readIO
 readIO:
     and esi, 3
-%IFNDEF RELEASE
+;%IFNDEF RELEASE
+%IFDEF XXX
     push rdi
     push rsi
     mov rdi, rsi
@@ -119,12 +121,7 @@ readTimer:
     shr eax, cl
     ret
 
-readInterruptFLag:  ; Should never happen ????
-%IFNDEF RELEASE
-    push rdi
-    call readingIntFlag
-    pop rdi
-%ENDIF
+readInterruptFLag:
     mov al, [TIMER_FLAG]
     ret
 
@@ -136,13 +133,13 @@ writeTimer:
     jz writeEdgeDetectControl
 
     ; TODO: Check bit A3 for timer interrupt, should not be necessary
+    mov BYTE [TIMER_FLAG], 0
     and esi, 3
     mov cl, [TIMER_DIV_TABLE+rsi]
     mov [TIMER_DIV], cl
     movzx eax, al
     shl eax, cl
     mov [TIMER], eax
-    mov BYTE [TIMER_FLAG], 0
     ret
 
 writeEdgeDetectControl: ; Should never happen ????
