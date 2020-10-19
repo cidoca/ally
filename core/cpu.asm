@@ -531,10 +531,10 @@ _STORE_DATA_RESULT:
 ; *********************************************
 GLOBAL _BRANCH, _BRANCH2
 _BRANCH:
-    mov dl, [ADH]
+    mov dl, [PCH]
     movsx eax, BYTE [DATA_BUFFER]
     add [programCounter], eax
-    cmp [ADH], dl
+    cmp [PCH], dl
     je _BRANCH2
     __NEXT_CYCLE _BRANCH2
 _BRANCH2:

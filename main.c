@@ -35,11 +35,7 @@ void opcodeNotImplemented() {
 }
 
 void writingIO(int address, int value) {
-//    printf("#### Attempt to write %02X in %04X IO port !!!!\n", value & 0xff, address);
-}
-
-void readingIntFlag() {
-    printf("#### Attempt to read interrupt flag !!!!\n");
+    printf("#### Attempt to write %02X in %04X IO port !!!!\n", value & 0xff, address);
 }
 
 void writingEdgeDetectControl(int address, int value) {
@@ -50,11 +46,19 @@ void readingInvalidTIA(int value) {
 //    printf("#### Attempt to read invalid TIA register: %02X\n", value & 0xff);
 }
 
+char *TIA_NAME[64] = {};
 void writingInvalidTIA(int address, int value) {
-    if (
-        address == 0x00
-        || address == 0x01
+    if (0
+//        || address == 0x00
+//        || address == 0x01
         || address == 0x03
+        || address == 0x08
+        || address == 0x0F
+//        || address == 0x14
+//        || address == 0x1F
+//        || address == 0x24
+//        || address == 0x2A
+//        || address == 0x2B
     )
     printf("#### Writing TIA: %02X <- %02X  S/C: %d/%d\n", address, value & 0xff, SCANLINE, CLOCKCOUNTS);
 }
@@ -80,10 +84,11 @@ void initSDL(char *filename)
 
     // Create window and texture
     snprintf(title, FILENAME_MAX, "Ally - %s", filename);
-    win = SDL_CreateWindow(title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1140, 900, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
+    win = SDL_CreateWindow(title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1368, 960, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
+    //win = SDL_CreateWindow(title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 228, 320, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
     renderer = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED);
-    SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1");
-    texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, 228, 361); // 160, 192);
+    //SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1");
+    texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, 228, 320); // 160, 192);
 
     // Setup keyboard and joysticks
     keys = (Uint8*)SDL_GetKeyboardState(NULL);
@@ -134,9 +139,10 @@ void openROM(char *filename)
         exit(-1);
     }
 
-    read(fd, ROM, 32768);
+    int size = read(fd, ROM, 32768);
     close(fd);
 
+    setupBanks(size);
     initCpu();
     initRIOT();
     initTIA();
@@ -194,7 +200,7 @@ void mainLoop()
 
 //        t2 = SDL_GetTicks();
 //        printf("%d\n", t2 - t1);
-        SDL_Delay(200);
+        SDL_Delay(32);
 //        t1 = t2;
     }
 }

@@ -30,7 +30,7 @@ GLOBAL scanFrame, NTC
 scanFrame:
 %IFNDEF RELEASE
     mov eax, 0FF00h
-    mov ecx, 228 * 360
+    mov ecx, 228 * 320
     push rdi
     rep stosd
     pop rdi
@@ -71,7 +71,7 @@ NTC2:
     mov BYTE [TIA+WSYNC], 0
 
     inc DWORD [SCANLINE]
-    cmp DWORD [SCANLINE], 360
+    cmp DWORD [SCANLINE], 320
     jb newLine
 
 endFrame:

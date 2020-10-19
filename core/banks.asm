@@ -20,13 +20,104 @@
 
 SECTION .text
 
+; * Read from 2K ROM
+; ********************
+GLOBAL readROM2K
+readROM2K:
+    and esi, 07FFh
+    mov al, [ROM+rsi]
+    ret
+
+; * Read from 4K ROM
+; ********************
+GLOBAL readROM4K
+readROM4K:
+    mov al, [ROM+rsi]
+    ret
+
+; * Write to 2K or 4K ROM
+; *************************
+GLOBAL writeROM2_4K
+writeROM2_4K:
+    ret
+
+; * Read from 8K ROM
+; ********************
+GLOBAL readROM8K
+readROM8K:
+    cmp esi, 0FF8h
+    jb RB8
+    cmp esi, 0FF9h
+    ja RB8
+
+    mov eax, esi
+    sub eax, 0FF8h
+    shl eax, 12
+    add eax, ROM
+    mov [BANK_PTR], eax
+
+RB8:
+    add esi, [BANK_PTR]
+    mov al, [rsi]
+    ret
+
+; * Write to 8K ROM
+; *******************
+GLOBAL writeROM8K
+writeROM8K:
+    cmp esi, 0FF8h
+    jb WB8
+    cmp esi, 0FF9h
+    ja WB8
+
+    mov eax, esi
+    sub eax, 0FF8h
+    shl eax, 12
+    add eax, ROM
+    mov [BANK_PTR], eax
+
+WB8:
+    ret
+
+; * Setup ROM banks
+; *******************
+GLOBAL setupBanks
+setupBanks:
+    cmp edi, 0800h      ; 2K
+    jne SB0
+    mov DWORD [READ_ROM], readROM2K
+    mov DWORD [WRITE_ROM], writeROM2_4K
+    mov DWORD [BANK_PTR], ROM
+    ret
+SB0:
+    cmp edi, 1000h      ; 4K
+    jne SB1
+    mov DWORD [READ_ROM], readROM4K
+    mov DWORD [WRITE_ROM], writeROM2_4K
+    mov DWORD [BANK_PTR], ROM
+    ret
+SB1:
+    cmp edi, 2000h      ; 8K
+    jne SB_ERROR
+    mov DWORD [READ_ROM], readROM8K
+    mov DWORD [WRITE_ROM], writeROM8K
+    mov DWORD [BANK_PTR], ROM + 1000h
+    ret
+SB_ERROR:
+    xor eax, eax
+    ret
+
 ; * Read memory
 ; ***************
 GLOBAL readMemory
 readMemory:
     and esi, 01FFFh
     test esi, 01000h
-    jnz readROM
+    jz RM
+    and esi, 0FFFh
+    mov edx, [READ_ROM]
+    jmp rdx
+RM:
     test esi, 00080h
     jz readTIA
     test esi, 00200h
@@ -34,9 +125,6 @@ readMemory:
     test esi, 00004h
     jnz readTimer
     jmp readIO
-readROM:
-    mov al, [ROM+rsi-01000h]
-    ret
 
 ; * Write memory
 ; ****************
@@ -44,7 +132,11 @@ GLOBAL writeMemory
 writeMemory:
     and esi, 01FFFh
     test esi, 01000h
-    jnz writeROM
+    jz WM
+    and esi, 0FFFh
+    mov edx, [WRITE_ROM]
+    jmp rdx
+WM:
     test esi, 00080h
     jz writeTIA
     test esi, 00200h
@@ -52,11 +144,12 @@ writeMemory:
     test esi, 00004h
     jnz writeTimer
     jmp writeIO
-writeROM:
-    ret
 
 
 SECTION .bss
 
-GLOBAL ROM
-ROM     RESB 32768
+GLOBAL READ_ROM, WRITE_ROM, BANK_PTR, ROM
+READ_ROM    RESD 1
+WRITE_ROM   RESD 1
+BANK_PTR    RESD 1
+ROM         RESB 32768

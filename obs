@@ -1,5 +1,5 @@
 clean frames, no vblank, no vsync
-  e_t, zoofunc
+  zoofunc
 
 vblank late
   spidrman, demonatk
@@ -9,3 +9,6 @@ no vblank
 
 reading interrupt flag
   shootin
+
+ball reset offset
+  fishdrby
