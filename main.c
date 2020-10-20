@@ -43,7 +43,7 @@ void writingEdgeDetectControl(int address, int value) {
 }
 
 void readingInvalidTIA(int value) {
-//    printf("#### Attempt to read invalid TIA register: %02X\n", value & 0xff);
+    printf("#### Attempt to read invalid TIA register: %02X\n", value & 0xff);
 }
 
 char *TIA_NAME[64] = {};
@@ -57,7 +57,7 @@ void writingInvalidTIA(int address, int value) {
 //        || address == 0x14
 //        || address == 0x1F
 //        || address == 0x24
-//        || address == 0x2A
+        || address == 0x2A
 //        || address == 0x2B
     )
     printf("#### Writing TIA: %02X <- %02X  S/C: %d/%d\n", address, value & 0xff, SCANLINE, CLOCKCOUNTS);
@@ -84,7 +84,7 @@ void initSDL(char *filename)
 
     // Create window and texture
     snprintf(title, FILENAME_MAX, "Ally - %s", filename);
-    win = SDL_CreateWindow(title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1368, 960, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
+    win = SDL_CreateWindow(title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 912, 640, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
     //win = SDL_CreateWindow(title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 228, 320, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
     renderer = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED);
     //SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1");
@@ -146,13 +146,15 @@ void openROM(char *filename)
     initCpu();
     initRIOT();
     initTIA();
+
+    _pf = _bl = _m0 = _m1 = 1;
 }
 
 void getControls()
 {
     PORTA = 0xFF;
     PORTB = 0x3F;
-    INPT4 = 0x80;
+    INPT4 = INPT5 = 0x80;
 
     // Player 0
     if (keys[SDL_SCANCODE_RIGHT])
@@ -164,7 +166,7 @@ void getControls()
     if (keys[SDL_SCANCODE_UP])
         PORTA &= ~0x10;
     if (keys[SDL_SCANCODE_LCTRL])
-        PORTB &= ~0x80;
+        INPT4 &= ~0x80;
 
     // Reset
     if (keys[SDL_SCANCODE_ESCAPE])
@@ -173,6 +175,15 @@ void getControls()
     // Select
     if (keys[SDL_SCANCODE_TAB])
         PORTB &= ~0x02;
+
+    // Debug
+    static int f9 = 0, f10 = 0, f11 = 0, f12 = 0, wo = 0, wd = 1;
+    if (keys[SDL_SCANCODE_F9]) { if (!f9) { f9 = 1; _pf = !_pf; } } else f9 = 0;
+    if (keys[SDL_SCANCODE_F10]) { if (!f10) { f10 = 1; _bl = !_bl; } } else f10 = 0;
+    if (keys[SDL_SCANCODE_F11]) { if (!f11) { f11 = 1; _m0 = !_m0; } } else f11 = 0;
+    if (keys[SDL_SCANCODE_F12]) { if (!f12) { f12 = 1; _m1 = !_m1; } } else f12 = 0;
+    if (keys[SDL_SCANCODE_MINUS]) { if (wd) { wo = 1; wd = 0; SDL_SetWindowSize(win, 228, 320); } }
+    if (keys[SDL_SCANCODE_EQUALS]) { if (wo) { wo = 0; wd = 1; SDL_SetWindowSize(win, 912, 640); } }
 }
 
 void mainLoop()

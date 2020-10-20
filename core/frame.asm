@@ -83,7 +83,19 @@ drawBG:
     cmp BYTE [CLOCKCOUNTS], 68
     jb DBG1
 
+    mov dl, [CLOCKCOUNTS]
+    sub dl, 68
+    test dl, 7
+    jnz DBG0
+    mov edx, [PRE_COLOR_PF]
+    mov [COLOR_PF], edx
+DBG0:
+
     ; Playfield
+%IFNDEF RELEASE
+    test BYTE [_pf], 1
+    jz PFX
+%ENDIF
     movzx edx, BYTE [CLOCKCOUNTS]
     sub edx, 68
     shr edx, 2
@@ -110,6 +122,10 @@ PF_P1:
 PFX:
 
     ; Ball
+%IFNDEF RELEASE
+    test BYTE [_bl], 1
+    jz BLX
+%ENDIF
     test BYTE [TIA+ENABL], ENA_BIT
     jz BLX
     mov dl, [POSITION_BL]
@@ -120,6 +136,70 @@ PFX:
     jae BLX
     mov eax, [COLOR_PF]
 BLX:
+
+    ; Player 0
+    mov cl, [POSITION_P0]
+    cmp [CLOCKCOUNTS], cl
+    jb P0X
+    add cl, 8
+    cmp [CLOCKCOUNTS], cl
+    jae P0X
+    sub cl, [CLOCKCOUNTS]
+    dec cl
+    mov dl, 1
+    shl dl, cl
+    test [TIA+GRP0], dl
+    jz P0X
+    mov eax, [COLOR_P0]
+P0X:
+
+    ; Missile 0
+%IFNDEF RELEASE
+    test BYTE [_m0], 1
+    jz M0X
+%ENDIF
+    test BYTE [TIA+ENAM0], ENA_BIT
+    jz M0X
+    mov dl, [POSITION_M0]
+    cmp [CLOCKCOUNTS], dl
+    jb M0X
+    add dl, [SIZE_M0]
+    cmp [CLOCKCOUNTS], dl
+    jae M0X
+    mov eax, [COLOR_P0]
+M0X:
+
+    ; Player 1
+    mov cl, [POSITION_P1]
+    cmp [CLOCKCOUNTS], cl
+    jb P1X
+    add cl, 8
+    cmp [CLOCKCOUNTS], cl
+    jae P1X
+    sub cl, [CLOCKCOUNTS]
+    dec cl
+    mov dl, 1
+    shl dl, cl
+    test [TIA+GRP1], dl
+    jz P1X
+    mov eax, [COLOR_P1]
+P1X:
+
+    ; Missile 1
+%IFNDEF RELEASE
+    test BYTE [_m1], 1
+    jz M1X
+%ENDIF
+    test BYTE [TIA+ENAM1], ENA_BIT
+    jz M1X
+    mov dl, [POSITION_M1]
+    cmp [CLOCKCOUNTS], dl
+    jb M1X
+    add dl, [SIZE_M1]
+    cmp [CLOCKCOUNTS], dl
+    jae M1X
+    mov eax, [COLOR_P1]
+M1X:
 
 DBG1:
 
@@ -210,6 +290,31 @@ COLOR_P1    RESD 1
 COLOR_PF    RESD 1
 COLOR_BK    RESD 1
 
+GLOBAL PRE_COLOR_PF
+PRE_COLOR_PF RESD 1
+
+GLOBAL POSITION_P0
+POSITION_P0 RESB 1
+
+GLOBAL POSITION_P1
+POSITION_P1 RESB 1
+
+GLOBAL POSITION_M0, SIZE_M0
+POSITION_M0 RESB 1
+SIZE_M0     RESB 1
+
+GLOBAL POSITION_M1, SIZE_M1
+POSITION_M1 RESB 1
+SIZE_M1     RESB 1
+
 GLOBAL POSITION_BL, SIZE_BL
 POSITION_BL RESB 1
 SIZE_BL     RESB 1
+
+%IFNDEF RELEASE
+GLOBAL _pf, _bl, _m0, _m1
+_pf  RESB 1
+_bl  RESB 1
+_m0  RESB 1
+_m1  RESB 1
+%ENDIF

@@ -40,18 +40,20 @@ initTIA:
 ; *************************************
 GLOBAL readTIA
 readTIA:
-    and esi, 03Fh
+%IFNDEF RELEASE
+    push rdi
+    push rsi
+    mov rdi, rsi
+    call readingInvalidTIA
+    pop rsi
+    pop rdi
+%ENDIF
+    and esi, 0Fh
     cmp esi, 0Dh
     ja readInvalidTIA
     mov al, [COLLISION+rsi]
     ret
 readInvalidTIA:
-%IFNDEF RELEASE
-    push rdi
-    mov rdi, rsi
-    call readingInvalidTIA
-    pop rdi
-%ENDIF
     mov al, 0
     ret
 
@@ -94,6 +96,31 @@ _WSYNC:
     mov BYTE [TIA+WSYNC], 1
     ret
 
+; * 04
+GLOBAL _NUSIZ0
+_NUSIZ0:
+    mov BYTE [TIA+NUSIZ0], al
+    mov cl, al
+    shr cl, 4
+    and cl, 3
+    mov al, 1
+    shl al, cl
+    mov [SIZE_M0], al
+    ret
+
+; * 05
+GLOBAL _NUSIZ1
+_NUSIZ1:
+    mov BYTE [TIA+NUSIZ1], al
+    mov cl, al
+    shr cl, 4
+    and cl, 3
+    mov al, 1
+    shl al, cl
+    mov [SIZE_M1], al
+    ret
+
+; * 06
 GLOBAL _COLUP0
 _COLUP0:
     and eax, 0FEh
@@ -101,6 +128,7 @@ _COLUP0:
     mov [COLOR_P0], eax
     ret
 
+; * 07
 GLOBAL _COLUP1
 _COLUP1:
     and eax, 0FEh
@@ -108,13 +136,15 @@ _COLUP1:
     mov [COLOR_P1], eax
     ret
 
+; * 08
 GLOBAL _COLUPF
 _COLUPF:
     and eax, 0FEh
     mov eax, [PALETTE+eax*2]
-    mov [COLOR_PF], eax
+    mov [PRE_COLOR_PF], eax
     ret
 
+; * 09
 GLOBAL _COLUBK
 _COLUBK:
     and eax, 0FEh
@@ -122,6 +152,7 @@ _COLUBK:
     mov [COLOR_BK], eax
     ret
 
+; * 0A
 GLOBAL _CTRLPF
 _CTRLPF:
     mov BYTE [TIA+CTRLPF], al
@@ -133,6 +164,59 @@ _CTRLPF:
     mov [SIZE_BL], al
     ret
 
+; * 10
+GLOBAL _RESP0
+_RESP0:
+    mov al, [CLOCKCOUNTS]
+    cmp al, 68
+    jb RP00
+    add al, 8         ; ????????????
+    mov [POSITION_P0], al
+    ret
+RP00:
+    mov BYTE [POSITION_P0], 68 + 2 ; ????????????/
+    ret
+
+; * 11
+GLOBAL _RESP1
+_RESP1:
+    mov al, [CLOCKCOUNTS]
+    cmp al, 68
+    jb RP10
+    add al, 8         ; ????????????
+    mov [POSITION_P1], al
+    ret
+RP10:
+    mov BYTE [POSITION_P1], 68 + 2 ; ????????????/
+    ret
+
+; * 12
+GLOBAL _RESM0
+_RESM0:
+    mov al, [CLOCKCOUNTS]
+    cmp al, 68
+    jb RM00
+    add al, 7         ; ????????????
+    mov [POSITION_M0], al
+    ret
+RM00:
+    mov BYTE [POSITION_M0], 68 + 2 ; ????????????/
+    ret
+
+; * 13
+GLOBAL _RESM1
+_RESM1:
+    mov al, [CLOCKCOUNTS]
+    cmp al, 68
+    jb RM10
+    add al, 7         ; ????????????
+    mov [POSITION_M1], al
+    ret
+RM10:
+    mov BYTE [POSITION_M1], 68 + 1 ; ??????????????????
+    ret
+
+; * 14
 GLOBAL _RESBL
 _RESBL:
     mov al, [CLOCKCOUNTS]
@@ -142,12 +226,28 @@ _RESBL:
     mov [POSITION_BL], al
     ret
 RBL0:
-    mov BYTE [POSITION_BL], 68
+    mov BYTE [POSITION_BL], 68 + 2 ; ??????????????????
     ret
 
-; * 
+; * 2A
 GLOBAL _HMOVE
 _HMOVE:
+    mov al, [TIA+HMP0]
+    sar al, 4
+    sub [POSITION_P0], al
+
+    mov al, [TIA+HMP1]
+    sar al, 4
+    sub [POSITION_P1], al
+
+    mov al, [TIA+HMM0]
+    sar al, 4
+    sub [POSITION_M0], al
+
+    mov al, [TIA+HMM1]
+    sar al, 4
+    sub [POSITION_M1], al
+
     mov al, [TIA+HMBL]
     sar al, 4
     sub [POSITION_BL], al
@@ -177,9 +277,9 @@ SECTION .data
 GLOBAL TIA_REGISTERS
 TIA_REGISTERS:
     ;    0/8      1/9      2/A      3/B      4/C      5/D      6/E      7/F
-    DD _WREG,   _WREG,   _WSYNC,  _RNIMP,  _WREG,   _WREG,   _COLUP0, _COLUP1
+    DD _WREG,   _WREG,   _WSYNC,  _RNIMP,  _NUSIZ0, _NUSIZ1, _COLUP0, _COLUP1
     DD _COLUPF, _COLUBK, _CTRLPF, _WREG,   _WREG,   _WREG,   _WREG,   _WREG     ; 0
-    DD _RNIMP,  _RNIMP,  _RNIMP,  _RNIMP,  _RESBL,  _WREG,   _WREG,   _WREG
+    DD _RESP0,  _RESP1,  _RESM0,  _RESM1,  _RESBL,  _WREG,   _WREG,   _WREG
     DD _WREG,   _WREG,   _WREG,   _WREG,   _WREG,   _WREG,   _WREG,   _WREG     ; 1
     DD _WREG,   _WREG,   _WREG,   _WREG,   _WREG,   _WREG,   _WREG,   _WREG
     DD _WREG,   _WREG,   _HMOVE,  _HMCLR,  _CXCLR,  _RNIMP,  _RNIMP,  _RNIMP    ; 2

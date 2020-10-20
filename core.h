@@ -21,6 +21,8 @@ extern unsigned int SCANLINE;
 extern unsigned char CLOCKCOUNTS;
 extern unsigned char PORTA, PORTB, INPT4, INPT5;
 
+extern unsigned char _pf, _bl, _m0, _m1;
+
 void setupBanks(int);
 void initCpu();
 void pulseCpu();
