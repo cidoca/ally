@@ -24,6 +24,40 @@
 
 SECTION .text
 
+; * Draw Playfield
+; ******************
+GLOBAL drawPlayfiled
+drawPlayfiled:
+%IFNDEF RELEASE
+    test BYTE [_pf], 1
+    jz PFX
+%ENDIF
+    movzx edx, BYTE [CLOCKCOUNTS]
+    sub edx, 68
+    shr edx, 2
+    test BYTE [TIA+CTRLPF], CTRLPF_REF
+    jnz PF_REF
+    mov edx, [PLAYFIELD_TABLE+edx*4]
+    jmp PF_TEST
+PF_REF:
+    mov edx, [PLAYFIELD_TABLE_REF+edx*4]
+PF_TEST:
+    test DWORD [TIA+PF0], edx
+    jz PFX
+    test BYTE [TIA+CTRLPF], CTRLPF_SCORE
+    jnz PF_P
+    mov eax, [COLOR_PF]
+    jmp PFX
+PF_P:
+    cmp BYTE [CLOCKCOUNTS], 68 + 80
+    jae PF_P1
+    mov eax, [COLOR_P0]
+    jmp PFX
+PF_P1:
+    mov eax, [COLOR_P1]
+PFX:
+    ret
+
 ; * Render one frame
 ; ********************
 GLOBAL scanFrame, NTC
@@ -94,35 +128,10 @@ drawBG:
     ;mov [COLOR_PF], edx
 DBG0:
 
-    ; Playfield
-%IFNDEF RELEASE
-    test BYTE [_pf], 1
-    jz PFX
-%ENDIF
-    movzx edx, BYTE [CLOCKCOUNTS]
-    sub edx, 68
-    shr edx, 2
-    test BYTE [TIA+CTRLPF], CTRLPF_REF
-    jnz PF_REF
-    mov edx, [PLAYFIELD_TABLE+edx*4]
-    jmp PF_TEST
-PF_REF:
-    mov edx, [PLAYFIELD_TABLE_REF+edx*4]
-PF_TEST:
-    test DWORD [TIA+PF0], edx
-    jz PFX
-    test BYTE [TIA+CTRLPF], CTRLPF_SCORE
-    jnz PF_P
-    mov eax, [COLOR_PF]
-    jmp PFX
-PF_P:
-    cmp BYTE [CLOCKCOUNTS], 68 + 80
-    jae PF_P1
-    mov eax, [COLOR_P0]
-    jmp PFX
-PF_P1:
-    mov eax, [COLOR_P1]
-PFX:
+    test BYTE [TIA+CTRLPF], CTRLPF_PFP
+    jnz PFA
+    call drawPlayfiled
+PFA:
 
     ; Ball
 %IFNDEF RELEASE
@@ -163,15 +172,19 @@ P1X:
     ; Player 1-2
     cmp BYTE [COPIES_P1], 2
     jb P12X
-    mov cl, [POSITION_P1]
-    add cl, [SPACES_P1]
-    cmp [CLOCKCOUNTS], cl
+    mov dl, [POSITION_P1]
+    add dl, [SPACES_P1]
+    cmp [CLOCKCOUNTS], dl
     jb P12X
-    add cl, 8
-    cmp [CLOCKCOUNTS], cl
+    add dl, [SIZE_P1]
+    cmp [CLOCKCOUNTS], dl
     jae P12X
-    sub cl, [CLOCKCOUNTS]
-    dec cl
+    mov cl, [SIZE_P1]
+    shr cl, 4
+    sub dl, [CLOCKCOUNTS]
+    dec dl
+    shr dl, cl
+    mov cl, dl
     mov dl, 1
     shl dl, cl
     test [GRP1B], dl
@@ -182,17 +195,21 @@ P12X:
     ; Player 1-3
     cmp BYTE [COPIES_P1], 3
     jb P13X
-    mov cl, [POSITION_P1]
-    mov dl, [SPACES_P1]
-    add cl, dl
-    add cl, dl
-    cmp [CLOCKCOUNTS], cl
+    mov dl, [POSITION_P1]
+    mov cl, [SPACES_P1]
+    add dl, cl
+    add dl, cl
+    cmp [CLOCKCOUNTS], dl
     jb P13X
-    add cl, 8
-    cmp [CLOCKCOUNTS], cl
+    add dl, [SIZE_P1]
+    cmp [CLOCKCOUNTS], dl
     jae P13X
-    sub cl, [CLOCKCOUNTS]
-    dec cl
+    mov cl, [SIZE_P1]
+    shr cl, 4
+    sub dl, [CLOCKCOUNTS]
+    dec dl
+    shr dl, cl
+    mov cl, dl
     mov dl, 1
     shl dl, cl
     test [GRP1B], dl
@@ -241,15 +258,19 @@ P0X:
     ; Player 0-2
     cmp BYTE [COPIES_P0], 2
     jb P02X
-    mov cl, [POSITION_P0]
-    add cl, [SPACES_P0]
-    cmp [CLOCKCOUNTS], cl
+    mov dl, [POSITION_P0]
+    add dl, [SPACES_P0]
+    cmp [CLOCKCOUNTS], dl
     jb P02X
-    add cl, 8
-    cmp [CLOCKCOUNTS], cl
+    add dl, [SIZE_P0]
+    cmp [CLOCKCOUNTS], dl
     jae P02X
-    sub cl, [CLOCKCOUNTS]
-    dec cl
+    mov cl, [SIZE_P0]
+    shr cl, 4
+    sub dl, [CLOCKCOUNTS]
+    dec dl
+    shr dl, cl
+    mov cl, dl
     mov dl, 1
     shl dl, cl
     test [GRP0B], dl
@@ -260,17 +281,21 @@ P02X:
     ; Player 0-3
     cmp BYTE [COPIES_P0], 3
     jb P03X
-    mov cl, [POSITION_P0]
-    mov dl, [SPACES_P0]
-    add cl, dl
-    add cl, dl
-    cmp [CLOCKCOUNTS], cl
+    mov dl, [POSITION_P0]
+    mov cl, [SPACES_P0]
+    add dl, cl
+    add dl, cl
+    cmp [CLOCKCOUNTS], dl
     jb P03X
-    add cl, 8
-    cmp [CLOCKCOUNTS], cl
+    add dl, [SIZE_P0]
+    cmp [CLOCKCOUNTS], dl
     jae P03X
-    sub cl, [CLOCKCOUNTS]
-    dec cl
+    mov cl, [SIZE_P0]
+    shr cl, 4
+    sub dl, [CLOCKCOUNTS]
+    dec dl
+    shr dl, cl
+    mov cl, dl
     mov dl, 1
     shl dl, cl
     test [GRP0B], dl
@@ -295,6 +320,11 @@ P03X:
     jae M0X
     mov eax, [COLOR_P0]
 M0X:
+
+    test BYTE [TIA+CTRLPF], CTRLPF_PFP
+    jz PFB
+    call drawPlayfiled
+PFB:
 
 DBG1:
 
