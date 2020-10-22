@@ -140,84 +140,6 @@ PFX:
     mov eax, [COLOR_PF]
 BLX:
 
-    ; Player 0
-    mov dl, [POSITION_P0]
-    cmp [CLOCKCOUNTS], dl
-    jb P0X
-    add dl, [SIZE_P0]
-    cmp [CLOCKCOUNTS], dl
-    jae P0X
-    mov cl, [SIZE_P0]
-    shr cl, 4
-    sub dl, [CLOCKCOUNTS]
-    dec dl
-    shr dl, cl
-    mov cl, dl
-    mov dl, 1
-    shl dl, cl
-    test [GRP0B], dl
-    jz P0X
-    mov eax, [COLOR_P0]
-P0X:
-
-    ; Player 0-2
-    cmp BYTE [COPIES_P0], 2
-    jb P02X
-    mov cl, [POSITION_P0]
-    add cl, [SPACES_P0]
-    cmp [CLOCKCOUNTS], cl
-    jb P02X
-    add cl, 8
-    cmp [CLOCKCOUNTS], cl
-    jae P02X
-    sub cl, [CLOCKCOUNTS]
-    dec cl
-    mov dl, 1
-    shl dl, cl
-    test [GRP0B], dl
-    jz P02X
-    mov eax, [COLOR_P0]
-P02X:
-
-    ; Player 0-3
-    cmp BYTE [COPIES_P0], 3
-    jb P03X
-    mov cl, [POSITION_P0]
-    mov dl, [SPACES_P0]
-    add cl, dl
-    add cl, dl
-    cmp [CLOCKCOUNTS], cl
-    jb P03X
-    add cl, 8
-    cmp [CLOCKCOUNTS], cl
-    jae P03X
-    sub cl, [CLOCKCOUNTS]
-    dec cl
-    mov dl, 1
-    shl dl, cl
-    test [GRP0B], dl
-    jz P03X
-    mov eax, [COLOR_P0]
-P03X:
-
-    ; Missile 0
-%IFNDEF RELEASE
-    test BYTE [_m0], 1
-    jz M0X
-%ENDIF
-    test BYTE [TIA+ENAM0], ENA_BIT
-    jz M0X
-    test BYTE [TIA+RESMP0], RESMP_BIT
-    jnz M0X
-    mov dl, [POSITION_M0]
-    cmp [CLOCKCOUNTS], dl
-    jb M0X
-    add dl, [SIZE_M0]
-    cmp [CLOCKCOUNTS], dl
-    jae M0X
-    mov eax, [COLOR_P0]
-M0X:
-
     ; Player 1
     mov dl, [POSITION_P1]
     cmp [CLOCKCOUNTS], dl
@@ -295,6 +217,84 @@ P13X:
     jae M1X
     mov eax, [COLOR_P1]
 M1X:
+
+    ; Player 0
+    mov dl, [POSITION_P0]
+    cmp [CLOCKCOUNTS], dl
+    jb P0X
+    add dl, [SIZE_P0]
+    cmp [CLOCKCOUNTS], dl
+    jae P0X
+    mov cl, [SIZE_P0]
+    shr cl, 4
+    sub dl, [CLOCKCOUNTS]
+    dec dl
+    shr dl, cl
+    mov cl, dl
+    mov dl, 1
+    shl dl, cl
+    test [GRP0B], dl
+    jz P0X
+    mov eax, [COLOR_P0]
+P0X:
+
+    ; Player 0-2
+    cmp BYTE [COPIES_P0], 2
+    jb P02X
+    mov cl, [POSITION_P0]
+    add cl, [SPACES_P0]
+    cmp [CLOCKCOUNTS], cl
+    jb P02X
+    add cl, 8
+    cmp [CLOCKCOUNTS], cl
+    jae P02X
+    sub cl, [CLOCKCOUNTS]
+    dec cl
+    mov dl, 1
+    shl dl, cl
+    test [GRP0B], dl
+    jz P02X
+    mov eax, [COLOR_P0]
+P02X:
+
+    ; Player 0-3
+    cmp BYTE [COPIES_P0], 3
+    jb P03X
+    mov cl, [POSITION_P0]
+    mov dl, [SPACES_P0]
+    add cl, dl
+    add cl, dl
+    cmp [CLOCKCOUNTS], cl
+    jb P03X
+    add cl, 8
+    cmp [CLOCKCOUNTS], cl
+    jae P03X
+    sub cl, [CLOCKCOUNTS]
+    dec cl
+    mov dl, 1
+    shl dl, cl
+    test [GRP0B], dl
+    jz P03X
+    mov eax, [COLOR_P0]
+P03X:
+
+    ; Missile 0
+%IFNDEF RELEASE
+    test BYTE [_m0], 1
+    jz M0X
+%ENDIF
+    test BYTE [TIA+ENAM0], ENA_BIT
+    jz M0X
+    test BYTE [TIA+RESMP0], RESMP_BIT
+    jnz M0X
+    mov dl, [POSITION_M0]
+    cmp [CLOCKCOUNTS], dl
+    jb M0X
+    add dl, [SIZE_M0]
+    cmp [CLOCKCOUNTS], dl
+    jae M0X
+    mov eax, [COLOR_P0]
+M0X:
 
 DBG1:
 

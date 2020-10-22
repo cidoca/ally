@@ -68,7 +68,9 @@ void writingInvalidTIA(int address, int value) {
         || address == 0x2A
 //        || address == 0x2B
     )
-    printf("#### Writing TIA: %6s <- %02X  S/C: %3d/%3d  P: %3d/%4d\n", address <= 0x2C ? TIA_NAME[address] : "???", value & 0xff, SCANLINE, CLOCKCOUNTS, POSITION_P0, POSITION_P1);
+    printf("#### Writing TIA: %6s <- %02X  S/C: %3d/%3d  P: %3d/%4d  M: %3d/%3d\n",
+            address <= 0x2C ? TIA_NAME[address] : "???", value & 0xff,
+            SCANLINE, CLOCKCOUNTS, POSITION_P0, POSITION_P1, POSITION_M0, POSITION_M1);
 }
 
 void writingRAM(int address, int value) {

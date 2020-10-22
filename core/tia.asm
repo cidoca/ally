@@ -187,7 +187,7 @@ _RESP0:
     mov [POSITION_P0], al
     ret
 RP00:
-    mov BYTE [POSITION_P0], 68 + 3 ; ????????????/
+    mov BYTE [POSITION_P0], 68 + 3 ; ????????????
     ret
 
 ; * 11
@@ -200,12 +200,14 @@ _RESP1:
     mov [POSITION_P1], al
     ret
 RP10:
-    mov BYTE [POSITION_P1], 68 + 3 ; ????????????/
+    mov BYTE [POSITION_P1], 68 + 3 ; ????????????
     ret
 
 ; * 12
 GLOBAL _RESM0
 _RESM0:
+    test BYTE [TIA+RESMP0], RESMP_BIT
+    jnz RM01
     mov al, [CLOCKCOUNTS]
     cmp al, 68
     jb RM00
@@ -213,12 +215,15 @@ _RESM0:
     mov [POSITION_M0], al
     ret
 RM00:
-    mov BYTE [POSITION_M0], 68 + 2 ; ????????????/
+    mov BYTE [POSITION_M0], 68 + 2 ; ????????????
+RM01:
     ret
 
 ; * 13
 GLOBAL _RESM1
 _RESM1:
+    test BYTE [TIA+RESMP1], RESMP_BIT
+    jnz RM11
     mov al, [CLOCKCOUNTS]
     cmp al, 68
     jb RM10
@@ -227,6 +232,7 @@ _RESM1:
     ret
 RM10:
     mov BYTE [POSITION_M1], 68 + 2 ; ??????????????????
+RM11:
     ret
 
 ; * 14
@@ -305,26 +311,40 @@ _HMOVE:
     sar al, 4
     sub [POSITION_P0], al
 
+    test BYTE [TIA+RESMP0], RESMP_BIT
+    jz HM0
+    add al, 6
+    mov [POSITION_M0], al
+    jmp HM1
+HM0:
+    mov al, [TIA+HMM0]
+    sar al, 4
+    sub [POSITION_M0], al
+HM1:
+
     mov al, [TIA+HMP1]
     sar al, 4
     sub [POSITION_P1], al
 
-    mov al, [TIA+HMM0]
-    sar al, 4
-    sub [POSITION_M0], al
-
+    test BYTE [TIA+RESMP1], RESMP_BIT
+    jz HM2
+    add al, 6
+    mov [POSITION_M1], al
+    jmp HM3
+HM2:
     mov al, [TIA+HMM1]
     sar al, 4
     sub [POSITION_M1], al
+HM3:
 
     mov al, [TIA+HMBL]
     sar al, 4
     sub [POSITION_BL], al
 
     cmp BYTE [CLOCKCOUNTS], 68
-    jae HM0
+    jae HM4
     mov BYTE [TIA+HMOVE], 1
-HM0:
+HM4:
     ret
 
 ; * Clears all horizontal motion registers to zero (no motion) - 2B
@@ -361,7 +381,7 @@ TIA_REGISTERS:
 
 GLOBAL GRP_COPIES, GRP_SIZES, GRP_SPACES
 GRP_COPIES      DB 1, 2, 2, 3, 2, 1, 3, 1
-GRP_SIZES       DB 8, 8, 8, 8, 8, 16, 8, 32
+GRP_SIZES       DB 8, 8, 16, 8, 32, 16, 16, 32
 GRP_SPACES      DB 0, 16, 32, 16, 64, 0, 32, 0
 
 SECTION .bss
