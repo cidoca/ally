@@ -69,6 +69,9 @@ NTC2:
     jb pulseTIA
     mov BYTE [CLOCKCOUNTS], 0
     mov BYTE [TIA+WSYNC], 0
+%IFNDEF RELEASE
+    mov BYTE [TIA+HMOVE], 0
+%ENDIF
 
     inc DWORD [SCANLINE]
     cmp DWORD [SCANLINE], 320
@@ -83,12 +86,12 @@ drawBG:
     cmp BYTE [CLOCKCOUNTS], 68
     jb DBG1
 
-    mov dl, [CLOCKCOUNTS]
-    sub dl, 68
-    test dl, 7
-    jnz DBG0
-    mov edx, [PRE_COLOR_PF]
-    mov [COLOR_PF], edx
+    ;mov dl, [CLOCKCOUNTS]
+    ;sub dl, 68
+    ;test dl, 07h
+    ;jnz DBG0
+    ;mov edx, [PRE_COLOR_PF]
+    ;mov [COLOR_PF], edx
 DBG0:
 
     ; Playfield
@@ -126,7 +129,7 @@ PFX:
     test BYTE [_bl], 1
     jz BLX
 %ENDIF
-    test BYTE [TIA+ENABL], ENA_BIT
+    test BYTE [ENABLE_BLB], ENA_BIT
     jz BLX
     mov dl, [POSITION_BL]
     cmp [CLOCKCOUNTS], dl
@@ -138,20 +141,64 @@ PFX:
 BLX:
 
     ; Player 0
-    mov cl, [POSITION_P0]
-    cmp [CLOCKCOUNTS], cl
+    mov dl, [POSITION_P0]
+    cmp [CLOCKCOUNTS], dl
     jb P0X
+    add dl, [SIZE_P0]
+    cmp [CLOCKCOUNTS], dl
+    jae P0X
+    mov cl, [SIZE_P0]
+    shr cl, 4
+    sub dl, [CLOCKCOUNTS]
+    dec dl
+    shr dl, cl
+    mov cl, dl
+    mov dl, 1
+    shl dl, cl
+    test [GRP0B], dl
+    jz P0X
+    mov eax, [COLOR_P0]
+P0X:
+
+    ; Player 0-2
+    cmp BYTE [COPIES_P0], 2
+    jb P02X
+    mov cl, [POSITION_P0]
+    add cl, [SPACES_P0]
+    cmp [CLOCKCOUNTS], cl
+    jb P02X
     add cl, 8
     cmp [CLOCKCOUNTS], cl
-    jae P0X
+    jae P02X
     sub cl, [CLOCKCOUNTS]
     dec cl
     mov dl, 1
     shl dl, cl
-    test [TIA+GRP0], dl
-    jz P0X
+    test [GRP0B], dl
+    jz P02X
     mov eax, [COLOR_P0]
-P0X:
+P02X:
+
+    ; Player 0-3
+    cmp BYTE [COPIES_P0], 3
+    jb P03X
+    mov cl, [POSITION_P0]
+    mov dl, [SPACES_P0]
+    add cl, dl
+    add cl, dl
+    cmp [CLOCKCOUNTS], cl
+    jb P03X
+    add cl, 8
+    cmp [CLOCKCOUNTS], cl
+    jae P03X
+    sub cl, [CLOCKCOUNTS]
+    dec cl
+    mov dl, 1
+    shl dl, cl
+    test [GRP0B], dl
+    jz P03X
+    mov eax, [COLOR_P0]
+P03X:
 
     ; Missile 0
 %IFNDEF RELEASE
@@ -160,6 +207,8 @@ P0X:
 %ENDIF
     test BYTE [TIA+ENAM0], ENA_BIT
     jz M0X
+    test BYTE [TIA+RESMP0], RESMP_BIT
+    jnz M0X
     mov dl, [POSITION_M0]
     cmp [CLOCKCOUNTS], dl
     jb M0X
@@ -170,20 +219,64 @@ P0X:
 M0X:
 
     ; Player 1
-    mov cl, [POSITION_P1]
-    cmp [CLOCKCOUNTS], cl
+    mov dl, [POSITION_P1]
+    cmp [CLOCKCOUNTS], dl
     jb P1X
+    add dl, [SIZE_P1]
+    cmp [CLOCKCOUNTS], dl
+    jae P1X
+    mov cl, [SIZE_P1]
+    shr cl, 4
+    sub dl, [CLOCKCOUNTS]
+    dec dl
+    shr dl, cl
+    mov cl, dl
+    mov dl, 1
+    shl dl, cl
+    test [GRP1B], dl
+    jz P1X
+    mov eax, [COLOR_P1]
+P1X:
+
+    ; Player 1-2
+    cmp BYTE [COPIES_P1], 2
+    jb P12X
+    mov cl, [POSITION_P1]
+    add cl, [SPACES_P1]
+    cmp [CLOCKCOUNTS], cl
+    jb P12X
     add cl, 8
     cmp [CLOCKCOUNTS], cl
-    jae P1X
+    jae P12X
     sub cl, [CLOCKCOUNTS]
     dec cl
     mov dl, 1
     shl dl, cl
-    test [TIA+GRP1], dl
-    jz P1X
+    test [GRP1B], dl
+    jz P12X
     mov eax, [COLOR_P1]
-P1X:
+P12X:
+
+    ; Player 1-3
+    cmp BYTE [COPIES_P1], 3
+    jb P13X
+    mov cl, [POSITION_P1]
+    mov dl, [SPACES_P1]
+    add cl, dl
+    add cl, dl
+    cmp [CLOCKCOUNTS], cl
+    jb P13X
+    add cl, 8
+    cmp [CLOCKCOUNTS], cl
+    jae P13X
+    sub cl, [CLOCKCOUNTS]
+    dec cl
+    mov dl, 1
+    shl dl, cl
+    test [GRP1B], dl
+    jz P13X
+    mov eax, [COLOR_P1]
+P13X:
 
     ; Missile 1
 %IFNDEF RELEASE
@@ -192,6 +285,8 @@ P1X:
 %ENDIF
     test BYTE [TIA+ENAM1], ENA_BIT
     jz M1X
+    test BYTE [TIA+RESMP1], RESMP_BIT
+    jnz M1X
     mov dl, [POSITION_M1]
     cmp [CLOCKCOUNTS], dl
     jb M1X
@@ -206,9 +301,12 @@ DBG1:
 %IFNDEF RELEASE
     test BYTE [TIA+VBLANK], VBLANK_VERTBLANK
     jnz PURPLE
+    cmp BYTE [CLOCKCOUNTS], 68 + 8
+    jae DBG2
+    test BYTE [TIA+HMOVE], 1
+    jnz PURPLE
     cmp BYTE [CLOCKCOUNTS], 68
-    jb PURPLE
-    jmp DBG2
+    jae DBG2
 
 PURPLE:
     mov edx, eax
@@ -290,14 +388,24 @@ COLOR_P1    RESD 1
 COLOR_PF    RESD 1
 COLOR_BK    RESD 1
 
-GLOBAL PRE_COLOR_PF
-PRE_COLOR_PF RESD 1
+;GLOBAL PRE_COLOR_PF
+;PRE_COLOR_PF RESD 1
 
-GLOBAL POSITION_P0
+GLOBAL POSITION_P0, GRP0A, GRP0B, COPIES_P0, SIZE_P0, SPACES_P0
+GRP0A       RESB 1
+GRP0B       RESB 1
 POSITION_P0 RESB 1
+COPIES_P0   RESB 1
+SIZE_P0     RESB 1
+SPACES_P0   RESB 1
 
-GLOBAL POSITION_P1
+GLOBAL POSITION_P1, GRP1A, GRP1B, COPIES_P1, SIZE_P1, SPACES_P1
+GRP1A       RESB 1
+GRP1B       RESB 1
 POSITION_P1 RESB 1
+COPIES_P1   RESB 1
+SIZE_P1     RESB 1
+SPACES_P1   RESB 1
 
 GLOBAL POSITION_M0, SIZE_M0
 POSITION_M0 RESB 1
@@ -307,9 +415,11 @@ GLOBAL POSITION_M1, SIZE_M1
 POSITION_M1 RESB 1
 SIZE_M1     RESB 1
 
-GLOBAL POSITION_BL, SIZE_BL
+GLOBAL POSITION_BL, SIZE_BL, ENABLE_BLA, ENABLE_BLB
 POSITION_BL RESB 1
 SIZE_BL     RESB 1
+ENABLE_BLA  RESB 1
+ENABLE_BLB  RESB 1
 
 %IFNDEF RELEASE
 GLOBAL _pf, _bl, _m0, _m1

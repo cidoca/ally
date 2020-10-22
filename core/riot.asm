@@ -39,8 +39,8 @@ GLOBAL nextTimerCycle
 nextTimerCycle:
     cmp DWORD [TIMER], 0
     jne NZ
-    mov BYTE [TIMER_FLAG], 080h
     mov BYTE [TIMER_DIV], 0
+    mov BYTE [TIMER_FLAG], 0C0h
 NZ:
     cmp DWORD [TIMER], 0FFFFFF00h
     je NR
@@ -115,13 +115,14 @@ readTimer:
     jnz readInterruptFLag
 
     ; TODO: Check bit A3 for timer interrupt, should not be necessary
-    mov BYTE [TIMER_FLAG], 0
+    and BYTE [TIMER_FLAG], 040h
     mov eax, [TIMER]
     mov cl, [TIMER_DIV]
     shr eax, cl
     ret
 
 readInterruptFLag:
+    and BYTE [TIMER_FLAG], 080h
     mov al, [TIMER_FLAG]
     ret
 
@@ -133,7 +134,7 @@ writeTimer:
     jz writeEdgeDetectControl
 
     ; TODO: Check bit A3 for timer interrupt, should not be necessary
-    mov BYTE [TIMER_FLAG], 0
+    and BYTE [TIMER_FLAG], 040h
     and esi, 3
     mov cl, [TIMER_DIV_TABLE+rsi]
     mov [TIMER_DIV], cl

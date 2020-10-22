@@ -88,6 +88,12 @@ setupBanks:
     mov DWORD [READ_ROM], readROM2K
     mov DWORD [WRITE_ROM], writeROM2_4K
     mov DWORD [BANK_PTR], ROM
+%IFNDEF RELEASE
+    mov rdi, ROM + 800h
+    mov rsi, ROM
+    mov ecx, 800h / 8
+    rep stosq
+%ENDIF
     ret
 SB0:
     cmp edi, 1000h      ; 4K

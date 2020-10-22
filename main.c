@@ -29,6 +29,7 @@ SDL_Window *win;
 SDL_Renderer *renderer;
 SDL_Texture *texture;
 
+#ifndef RELEASE
 void opcodeNotImplemented() {
     printf("#### Last opcode not implemented!!!\n");
     exit(1);
@@ -43,12 +44,19 @@ void writingEdgeDetectControl(int address, int value) {
 }
 
 void readingInvalidTIA(int value) {
-    printf("#### Attempt to read invalid TIA register: %02X\n", value & 0xff);
+//    printf("#### Attempt to read invalid TIA register: %02X\n", value & 0xff);
 }
 
-char *TIA_NAME[64] = {};
+char *TIA_NAME[64] = { "VSYNC", "VBLANK", "WSYNC", "RSYNC", "NUSIZ0", "NUSIZ1",
+                       "COLUP0", "COLUP1", "COLUPF", "COLUBK", "CTRLPF", "REFP0",
+                       "REFP1", "PF0", "PF1", "PF2", "RESP0", "RESP1", "RESM0",
+                       "RESM1", "RESBL", "AUDC0", "AUDC1", "AUDF0", "AUDF1",
+                       "AUDV0", "AUDV1", "GRP0", "GRP1", "ENAM0", "ENAM1", "ENABL",
+                       "HMP0", "HMP1", "HMM0", "HMM1", "HMBL", "VDELP0", "VDELP1",
+                       "VDELBL", "RESMP0", "RESMP1", "HMOVE", "HMCLR", "CXCLR" };
 void writingInvalidTIA(int address, int value) {
     if (0
+        || 1
 //        || address == 0x00
 //        || address == 0x01
         || address == 0x03
@@ -60,7 +68,7 @@ void writingInvalidTIA(int address, int value) {
         || address == 0x2A
 //        || address == 0x2B
     )
-    printf("#### Writing TIA: %02X <- %02X  S/C: %d/%d\n", address, value & 0xff, SCANLINE, CLOCKCOUNTS);
+    printf("#### Writing TIA: %6s <- %02X  S/C: %3d/%3d  P: %3d/%4d\n", address <= 0x2C ? TIA_NAME[address] : "???", value & 0xff, SCANLINE, CLOCKCOUNTS, POSITION_P0, POSITION_P1);
 }
 
 void writingRAM(int address, int value) {
@@ -72,6 +80,7 @@ void readingIO(int address) {
 //    if (address & 0xFF == 0x99)
 //    printf("#### Reading IO: %02X S/C: %d/%d\n", address, SCANLINE, CLOCKCOUNTS);
 }
+#endif
 
 void initSDL(char *filename)
 {
@@ -147,7 +156,9 @@ void openROM(char *filename)
     initRIOT();
     initTIA();
 
+#ifndef RELEASE
     _pf = _bl = _m0 = _m1 = 1;
+#endif
 }
 
 void getControls()
@@ -177,6 +188,7 @@ void getControls()
         PORTB &= ~0x02;
 
     // Debug
+#ifndef RELEASE
     static int f9 = 0, f10 = 0, f11 = 0, f12 = 0, wo = 0, wd = 1;
     if (keys[SDL_SCANCODE_F9]) { if (!f9) { f9 = 1; _pf = !_pf; } } else f9 = 0;
     if (keys[SDL_SCANCODE_F10]) { if (!f10) { f10 = 1; _bl = !_bl; } } else f10 = 0;
@@ -184,16 +196,17 @@ void getControls()
     if (keys[SDL_SCANCODE_F12]) { if (!f12) { f12 = 1; _m1 = !_m1; } } else f12 = 0;
     if (keys[SDL_SCANCODE_MINUS]) { if (wd) { wo = 1; wd = 0; SDL_SetWindowSize(win, 228, 320); } }
     if (keys[SDL_SCANCODE_EQUALS]) { if (wo) { wo = 0; wd = 1; SDL_SetWindowSize(win, 912, 640); } }
+#endif
 }
 
 void mainLoop()
 {
     SDL_Event event;
     void *frameBuffer;
-//    unsigned int t1, t2;
     int done = 0, pitch;
+    unsigned int t, tc, tf = 0;
 
-//    t1 = SDL_GetTicks();
+    t = SDL_GetTicks();
     while (!done) {
 
         while (SDL_PollEvent(&event)) {
@@ -201,7 +214,9 @@ void mainLoop()
                 done = 1;
         }
 
+#ifndef RELEASE
         printf("*** NEW FRAME ***\n");
+#endif
         getControls();
         SDL_LockTexture(texture, NULL, &frameBuffer, &pitch);
         scanFrame(frameBuffer);
@@ -209,10 +224,12 @@ void mainLoop()
         SDL_RenderCopy(renderer, texture, NULL, NULL);
         SDL_RenderPresent(renderer);
 
-//        t2 = SDL_GetTicks();
-//        printf("%d\n", t2 - t1);
-        SDL_Delay(32);
-//        t1 = t2;
+        t += (tf++ % 3 == 0) ? 16 : 17;
+        tc = SDL_GetTicks();
+        if (t > tc)
+            SDL_Delay(t - tc);
+        else
+            t = tc;
     }
 }
 
@@ -228,11 +245,6 @@ int main(int argc, char **argv)
     initSDL(argv[1]);
     mainLoop();
     deinitSDL();
-
-/*    while (1) {
-        nextTimerCycle();
-        pulseCpu();
-    } */
 
     return 0;
 }

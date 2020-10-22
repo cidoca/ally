@@ -32,7 +32,7 @@ initTIA:
     mov [INPT0_3], eax
     mov WORD [INPT4], 08080h
 
-    mov BYTE [CLOCKO2], 1
+    mov BYTE [CLOCKO2], 3
     mov BYTE [CLOCKCOUNTS], 0
     ret
 
@@ -99,25 +99,37 @@ _WSYNC:
 ; * 04
 GLOBAL _NUSIZ0
 _NUSIZ0:
-    mov BYTE [TIA+NUSIZ0], al
     mov cl, al
     shr cl, 4
     and cl, 3
-    mov al, 1
-    shl al, cl
-    mov [SIZE_M0], al
+    mov dl, 1
+    shl dl, cl
+    mov [SIZE_M0], dl
+    and eax, 7
+    mov dl, [GRP_COPIES+rax]
+    mov [COPIES_P0], dl
+    mov dl, [GRP_SIZES+rax]
+    mov [SIZE_P0], dl
+    mov al, [GRP_SPACES+rax]
+    mov [SPACES_P0], al
     ret
 
 ; * 05
 GLOBAL _NUSIZ1
 _NUSIZ1:
-    mov BYTE [TIA+NUSIZ1], al
     mov cl, al
     shr cl, 4
     and cl, 3
-    mov al, 1
-    shl al, cl
-    mov [SIZE_M1], al
+    mov dl, 1
+    shl dl, cl
+    mov [SIZE_M1], dl
+    and eax, 7
+    mov dl, [GRP_COPIES+rax]
+    mov [COPIES_P1], dl
+    mov dl, [GRP_SIZES+rax]
+    mov [SIZE_P1], dl
+    mov al, [GRP_SPACES+rax]
+    mov [SPACES_P1], al
     ret
 
 ; * 06
@@ -141,7 +153,8 @@ GLOBAL _COLUPF
 _COLUPF:
     and eax, 0FEh
     mov eax, [PALETTE+eax*2]
-    mov [PRE_COLOR_PF], eax
+    ;mov [PRE_COLOR_PF], eax
+    mov [COLOR_PF], eax
     ret
 
 ; * 09
@@ -170,11 +183,11 @@ _RESP0:
     mov al, [CLOCKCOUNTS]
     cmp al, 68
     jb RP00
-    add al, 8         ; ????????????
+    add al, 6         ; ????????????
     mov [POSITION_P0], al
     ret
 RP00:
-    mov BYTE [POSITION_P0], 68 + 2 ; ????????????/
+    mov BYTE [POSITION_P0], 68 + 3 ; ????????????/
     ret
 
 ; * 11
@@ -183,11 +196,11 @@ _RESP1:
     mov al, [CLOCKCOUNTS]
     cmp al, 68
     jb RP10
-    add al, 8         ; ????????????
+    add al, 6         ; ????????????
     mov [POSITION_P1], al
     ret
 RP10:
-    mov BYTE [POSITION_P1], 68 + 2 ; ????????????/
+    mov BYTE [POSITION_P1], 68 + 3 ; ????????????/
     ret
 
 ; * 12
@@ -196,7 +209,7 @@ _RESM0:
     mov al, [CLOCKCOUNTS]
     cmp al, 68
     jb RM00
-    add al, 7         ; ????????????
+    add al, 5         ; ????????????
     mov [POSITION_M0], al
     ret
 RM00:
@@ -209,11 +222,11 @@ _RESM1:
     mov al, [CLOCKCOUNTS]
     cmp al, 68
     jb RM10
-    add al, 7         ; ????????????
+    add al, 5         ; ????????????
     mov [POSITION_M1], al
     ret
 RM10:
-    mov BYTE [POSITION_M1], 68 + 1 ; ??????????????????
+    mov BYTE [POSITION_M1], 68 + 2 ; ??????????????????
     ret
 
 ; * 14
@@ -222,12 +235,68 @@ _RESBL:
     mov al, [CLOCKCOUNTS]
     cmp al, 68
     jb RBL0
-    add al, 7         ; ????????????
+    add al, 5         ; ????????????
     mov [POSITION_BL], al
     ret
 RBL0:
     mov BYTE [POSITION_BL], 68 + 2 ; ??????????????????
     ret
+
+; * 1B
+GLOBAL _GRP0
+_GRP0:
+    test BYTE [TIA+VDELP0], VDEL_BIT
+    jz GRP0_0
+    mov [GRP0A], al
+    jmp GRP0_1
+GRP0_0:
+    mov [GRP0B], al
+GRP0_1:
+    test BYTE [TIA+VDELP1], VDEL_BIT
+    jz GRP0_2
+    mov al, [GRP1A]
+    mov [GRP1B], al
+GRP0_2:
+    ret
+
+; * 1C
+GLOBAL _GRP1
+_GRP1:
+    test BYTE [TIA+VDELP1], VDEL_BIT
+    jz GRP1_0
+    mov [GRP1A], al
+    jmp GRP1_1
+GRP1_0:
+    mov [GRP1B], al
+GRP1_1:
+    test BYTE [TIA+VDELP0], VDEL_BIT
+    jz GRP1_2
+    mov al, [GRP0A]
+    mov [GRP0B], al
+GRP1_2:
+    test BYTE [TIA+VDELBL], VDEL_BIT
+    jz GRP1_3
+    mov al, [ENABLE_BLA]
+    mov [ENABLE_BLB], al
+GRP1_3:
+    ret
+
+; * 1F
+GLOBAL _ENABL
+_ENABL:
+    test BYTE [TIA+VDELBL], 1
+    jz EB0
+    mov BYTE [ENABLE_BLA], al
+    ret
+EB0:
+    mov BYTE [ENABLE_BLB], al
+    ret
+
+; * 25
+;GLOBAL _VDELP0
+;_VDELP0:
+;    mov [TIA+VDELP0], al
+;    ret
 
 ; * 2A
 GLOBAL _HMOVE
@@ -251,7 +320,11 @@ _HMOVE:
     mov al, [TIA+HMBL]
     sar al, 4
     sub [POSITION_BL], al
-    ;mov BYTE [TIA+HMOVE], 1
+
+    cmp BYTE [CLOCKCOUNTS], 68
+    jae HM0
+    mov BYTE [TIA+HMOVE], 1
+HM0:
     ret
 
 ; * Clears all horizontal motion registers to zero (no motion) - 2B
@@ -280,12 +353,16 @@ TIA_REGISTERS:
     DD _WREG,   _WREG,   _WSYNC,  _RNIMP,  _NUSIZ0, _NUSIZ1, _COLUP0, _COLUP1
     DD _COLUPF, _COLUBK, _CTRLPF, _WREG,   _WREG,   _WREG,   _WREG,   _WREG     ; 0
     DD _RESP0,  _RESP1,  _RESM0,  _RESM1,  _RESBL,  _WREG,   _WREG,   _WREG
-    DD _WREG,   _WREG,   _WREG,   _WREG,   _WREG,   _WREG,   _WREG,   _WREG     ; 1
+    DD _WREG,   _WREG,   _WREG,   _GRP0,   _GRP1,   _WREG,   _WREG,   _ENABL    ; 1
     DD _WREG,   _WREG,   _WREG,   _WREG,   _WREG,   _WREG,   _WREG,   _WREG
     DD _WREG,   _WREG,   _HMOVE,  _HMCLR,  _CXCLR,  _RNIMP,  _RNIMP,  _RNIMP    ; 2
     DD _RNIMP,  _RNIMP,  _RNIMP,  _RNIMP,  _RNIMP,  _RNIMP,  _RNIMP,  _RNIMP
     DD _RNIMP,  _RNIMP,  _RNIMP,  _RNIMP,  _RNIMP,  _RNIMP,  _RNIMP,  _RNIMP    ; 3
 
+GLOBAL GRP_COPIES, GRP_SIZES, GRP_SPACES
+GRP_COPIES      DB 1, 2, 2, 3, 2, 1, 3, 1
+GRP_SIZES       DB 8, 8, 8, 8, 8, 16, 8, 32
+GRP_SPACES      DB 0, 16, 32, 16, 64, 0, 32, 0
 
 SECTION .bss
 
