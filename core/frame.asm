@@ -33,14 +33,14 @@ drawPlayfiled:
     jz PFX
 %ENDIF
     movzx edx, BYTE [CLOCKCOUNTS]
-    sub edx, 68
-    shr edx, 2
+    sub dl, 68
+    shr dl, 2
     test BYTE [TIA+CTRLPF], CTRLPF_REF
     jnz PF_REF
-    mov edx, [PLAYFIELD_TABLE+edx*4]
+    mov edx, [PLAYFIELD_TABLE+rdx*4]
     jmp PF_TEST
 PF_REF:
-    mov edx, [PLAYFIELD_TABLE_REF+edx*4]
+    mov edx, [PLAYFIELD_TABLE_REF+rdx*4]
 PF_TEST:
     test DWORD [TIA+PF0], edx
     jz PFX
@@ -57,11 +57,28 @@ PF_P:
 PF_P1:
     mov eax, [COLOR_P1]
 PFX:
+
+    ; Ball
+%IFNDEF RELEASE
+    test BYTE [_bl], 1
+    jz BLX
+%ENDIF
+    test BYTE [ENABLE_BLB], ENA_BIT
+    jz BLX
+    mov dl, [POSITION_BL]
+    cmp [CLOCKCOUNTS], dl
+    jb BLX
+    add dl, [SIZE_BL]
+    cmp [CLOCKCOUNTS], dl
+    jae BLX
+    mov BYTE [DRAWN_BL], 1
+    mov eax, [COLOR_PF]
+BLX:
     ret
 
 ; * Render one frame
 ; ********************
-GLOBAL scanFrame, NTC
+GLOBAL scanFrame, NCC, NTC
 scanFrame:
 %IFNDEF RELEASE
     mov eax, 0FF00h
@@ -89,7 +106,8 @@ CNT:
     dec BYTE [CLOCKO2]
     jnz NTC2
     mov BYTE [CLOCKO2], 3
-    call nextTimerCycle
+    jmp nextTimerCycle
+NCC:
 
     test BYTE [TIA+WSYNC], 1
     jnz NTC
@@ -137,22 +155,8 @@ drawBG:
     call drawPlayfiled
 PFA:
 
-    ; Ball
-%IFNDEF RELEASE
-    test BYTE [_bl], 1
-    jz BLX
-%ENDIF
-    test BYTE [ENABLE_BLB], ENA_BIT
-    jz BLX
-    mov dl, [POSITION_BL]
-    cmp [CLOCKCOUNTS], dl
-    jb BLX
-    add dl, [SIZE_BL]
-    cmp [CLOCKCOUNTS], dl
-    jae BLX
-    mov BYTE [DRAWN_BL], 1
-    mov eax, [COLOR_PF]
-BLX:
+    test BYTE [GRP1B], 0FFh
+    jz P13X
 
     ; Player 1
     mov dl, [POSITION_P1]
@@ -243,6 +247,9 @@ P13X:
     mov BYTE [DRAWN_M1], 1
     mov eax, [COLOR_P1]
 M1X:
+
+    test BYTE [GRP0B], 0FFh
+    jz P03X
 
     ; Player 0
     mov dl, [POSITION_P0]
@@ -339,6 +346,65 @@ M0X:
     call drawPlayfiled
 PFB:
 
+    ; Check collisions
+    mov dl, [DRAWN_M0]
+    or dl, dl
+    jz C4
+    test [DRAWN_P1], dl
+    jz C0
+    or BYTE [COLLISION+CXM0P], 80h  ; M0 P1
+C0: test [DRAWN_P0], dl
+    jz C1
+    or BYTE [COLLISION+CXM0P], 40h  ; M0 P0
+C1: test [DRAWN_PF], dl
+    jz C2
+    or BYTE [COLLISION+CXM0FB], 80h  ; M0 PF
+C2: test [DRAWN_BL], dl
+    jz C3
+    or BYTE [COLLISION+CXM0FB], 40h  ; M0 BL
+C3: test [DRAWN_M1], dl
+    jz C4
+    or BYTE [COLLISION+CXPPMM], 40h  ; M0 M1
+C4: mov dl, [DRAWN_M1]
+    or dl, dl
+    jz C8
+    test [DRAWN_P0], dl
+    jz C5
+    or BYTE [COLLISION+CXM1P], 80h  ; M1 P0
+C5: test [DRAWN_P1], dl
+    jz C6
+    or BYTE [COLLISION+CXM1P], 40h  ; M1 P1
+C6: test [DRAWN_PF], dl
+    jz C7
+    or BYTE [COLLISION+CXM1FB], 80h  ; M1 PF
+C7: test [DRAWN_BL], dl
+    jz C8
+    or BYTE [COLLISION+CXM1FB], 40h  ; M1 BL
+C8: mov dl, [DRAWN_P0]
+    or dl, dl
+    jz C11
+    test [DRAWN_PF], dl
+    jz C9
+    or BYTE [COLLISION+CXP0FB], 80h  ; P0 PF
+C9: test [DRAWN_BL], dl
+    jz C10
+    or BYTE [COLLISION+CXP0FB], 40h  ; P0 BL
+C10:test [DRAWN_P1], dl
+    jz C11
+    or BYTE [COLLISION+CXPPMM], 80h  ; P0 P1
+C11:mov dl, [DRAWN_P1]
+    test [DRAWN_PF], dl
+    jz C12
+    or BYTE [COLLISION+CXP1FB], 80h  ; P1 PF
+C12:test [DRAWN_BL], dl
+    jz C13
+    or BYTE [COLLISION+CXP1FB], 40h  ; P1 BL
+C13:mov dl, [DRAWN_BL]
+    test [DRAWN_PF], dl
+    jz C14
+    or BYTE [COLLISION+CXBLPF], 80h  ; BL PF
+C14:
+
 DBG1:
 
 %IFNDEF RELEASE
@@ -376,58 +442,6 @@ DBG2:
     mov [rdi], eax
     add rdi, 4
 
-    ; Check collisions
-    mov al, [DRAWN_M0]
-    test [DRAWN_P1], al
-    jz C0
-    or BYTE [COLLISION+CXM0P], 80h  ; M0 P1
-C0: test [DRAWN_P0], al
-    jz C1
-    or BYTE [COLLISION+CXM0P], 40h  ; M0 P0
-C1: test [DRAWN_PF], al
-    jz C2
-    or BYTE [COLLISION+CXM0FB], 80h  ; M0 PF
-C2: test [DRAWN_BL], al
-    jz C3
-    or BYTE [COLLISION+CXM0FB], 40h  ; M0 BL
-C3: test [DRAWN_M1], al
-    jz C4
-    or BYTE [COLLISION+CXPPMM], 40h  ; M0 M1
-C4: mov al, [DRAWN_M1]
-    test [DRAWN_P0], al
-    jz C5
-    or BYTE [COLLISION+CXM1P], 80h  ; M1 P0
-C5: test [DRAWN_P1], al
-    jz C6
-    or BYTE [COLLISION+CXM1P], 40h  ; M1 P1
-C6: test [DRAWN_PF], al
-    jz C7
-    or BYTE [COLLISION+CXM1FB], 80h  ; M1 PF
-C7: test [DRAWN_BL], al
-    jz C8
-    or BYTE [COLLISION+CXM1FB], 40h  ; M1 BL
-C8: mov al, [DRAWN_P0]
-    test [DRAWN_PF], al
-    jz C9
-    or BYTE [COLLISION+CXP0FB], 80h  ; P0 PF
-C9: test [DRAWN_BL], al
-    jz C10
-    or BYTE [COLLISION+CXP0FB], 40h  ; P0 BL
-C10:test [DRAWN_P1], al
-    jz C11
-    or BYTE [COLLISION+CXPPMM], 80h  ; P0 P1
-C11:mov al, [DRAWN_P1]
-    test [DRAWN_PF], al
-    jz C12
-    or BYTE [COLLISION+CXP1FB], 80h  ; P1 PF
-C12:test [DRAWN_BL], al
-    jz C13
-    or BYTE [COLLISION+CXP1FB], 40h  ; P1 BL
-C13:mov al, [DRAWN_BL]
-    test [DRAWN_PF], al
-    jz C14
-    or BYTE [COLLISION+CXBLPF], 80h  ; BL PF
-C14:
 
     jmp CNT
 

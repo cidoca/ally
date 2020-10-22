@@ -6,6 +6,7 @@ LIBCORE_TEST=$(COREDIR)/libcore-test.a
 
 CC=gcc
 CFLAGS=-O0 -g -Wall `sdl2-config --cflags`
+#CFLAGS=-O2 -Wall -DRELEASE `sdl2-config --cflags`
 LIBS=`sdl2-config --libs`
 
 #all: $(TARGET) test-cpu

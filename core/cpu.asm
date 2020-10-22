@@ -17,12 +17,11 @@
 
 %INCLUDE "data.inc"
 %INCLUDE "banks.inc"
+%INCLUDE "frame.inc"
 
 %IFNDEF RELEASE
 EXTERN opcodeNotImplemented, d6502
 %ENDIF
-
-EXTERN NTC
 
 ; * Addressing modes
 ; ********************

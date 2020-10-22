@@ -15,6 +15,7 @@ libcore-test.a: $(OBJECTS_TEST)
 
 %.o: %.asm
 	@echo Assembling $<
+#	@$(ASM) -felf64 -DRELEASE $<
 	@$(ASM) -felf64 -g $<
 
 clean:

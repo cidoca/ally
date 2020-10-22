@@ -252,11 +252,10 @@ RBL0:
 GLOBAL _GRP0
 _GRP0:
     test BYTE [TIA+VDELP0], VDEL_BIT
-    jz GRP0_0
-    mov [GRP0A], al
-    jmp GRP0_1
-GRP0_0:
+    jnz GRP0_0
     mov [GRP0B], al
+GRP0_0:
+    mov [GRP0A], al
 GRP0_1:
     test BYTE [TIA+VDELP1], VDEL_BIT
     jz GRP0_2
@@ -269,11 +268,10 @@ GRP0_2:
 GLOBAL _GRP1
 _GRP1:
     test BYTE [TIA+VDELP1], VDEL_BIT
-    jz GRP1_0
-    mov [GRP1A], al
-    jmp GRP1_1
-GRP1_0:
+    jnz GRP1_0
     mov [GRP1B], al
+GRP1_0:
+    mov [GRP1A], al
 GRP1_1:
     test BYTE [TIA+VDELP0], VDEL_BIT
     jz GRP1_2

@@ -217,7 +217,7 @@ void mainLoop()
         }
 
 #ifndef RELEASE
-        printf("*** NEW FRAME ***\n");
+//        printf("*** NEW FRAME ***\n");
 #endif
         getControls();
         SDL_LockTexture(texture, NULL, &frameBuffer, &pitch);

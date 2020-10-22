@@ -18,6 +18,8 @@
 EXTERN writingIO, writingEdgeDetectControl, writingRAM, readingIO
 %ENDIF
 
+%INCLUDE "frame.inc"
+
 SECTION .text
 
 ; * Initialize RIOT
@@ -43,10 +45,9 @@ nextTimerCycle:
     mov BYTE [TIMER_FLAG], 0C0h
 NZ:
     cmp DWORD [TIMER], 0FFFFFF00h
-    je NR
+    je NCC
     dec DWORD [TIMER]
-NR:
-    ret
+    jmp NCC
 
 ; * Read from memory RAM 080h - 0FFh
 ; ************************************
