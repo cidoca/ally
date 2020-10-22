@@ -44,6 +44,7 @@ PF_REF:
 PF_TEST:
     test DWORD [TIA+PF0], edx
     jz PFX
+    mov BYTE [DRAWN_PF], 1
     test BYTE [TIA+CTRLPF], CTRLPF_SCORE
     jnz PF_P
     mov eax, [COLOR_PF]
@@ -120,13 +121,16 @@ drawBG:
     cmp BYTE [CLOCKCOUNTS], 68
     jb DBG1
 
+    xor rdx, rdx
+    mov [DRAWN_PF], rdx
+
     ;mov dl, [CLOCKCOUNTS]
     ;sub dl, 68
     ;test dl, 07h
     ;jnz DBG0
     ;mov edx, [PRE_COLOR_PF]
     ;mov [COLOR_PF], edx
-DBG0:
+;DBG0:
 
     test BYTE [TIA+CTRLPF], CTRLPF_PFP
     jnz PFA
@@ -146,6 +150,7 @@ PFA:
     add dl, [SIZE_BL]
     cmp [CLOCKCOUNTS], dl
     jae BLX
+    mov BYTE [DRAWN_BL], 1
     mov eax, [COLOR_PF]
 BLX:
 
@@ -166,6 +171,7 @@ BLX:
     shl dl, cl
     test [GRP1B], dl
     jz P1X
+    mov BYTE [DRAWN_P1], 1
     mov eax, [COLOR_P1]
 P1X:
 
@@ -189,6 +195,7 @@ P1X:
     shl dl, cl
     test [GRP1B], dl
     jz P12X
+    mov BYTE [DRAWN_P1], 1
     mov eax, [COLOR_P1]
 P12X:
 
@@ -214,6 +221,7 @@ P12X:
     shl dl, cl
     test [GRP1B], dl
     jz P13X
+    mov BYTE [DRAWN_P1], 1
     mov eax, [COLOR_P1]
 P13X:
 
@@ -232,6 +240,7 @@ P13X:
     add dl, [SIZE_M1]
     cmp [CLOCKCOUNTS], dl
     jae M1X
+    mov BYTE [DRAWN_M1], 1
     mov eax, [COLOR_P1]
 M1X:
 
@@ -252,6 +261,7 @@ M1X:
     shl dl, cl
     test [GRP0B], dl
     jz P0X
+    mov BYTE [DRAWN_P0], 1
     mov eax, [COLOR_P0]
 P0X:
 
@@ -275,6 +285,7 @@ P0X:
     shl dl, cl
     test [GRP0B], dl
     jz P02X
+    mov BYTE [DRAWN_P0], 1
     mov eax, [COLOR_P0]
 P02X:
 
@@ -300,6 +311,7 @@ P02X:
     shl dl, cl
     test [GRP0B], dl
     jz P03X
+    mov BYTE [DRAWN_P0], 1
     mov eax, [COLOR_P0]
 P03X:
 
@@ -318,6 +330,7 @@ P03X:
     add dl, [SIZE_M0]
     cmp [CLOCKCOUNTS], dl
     jae M0X
+    mov BYTE [DRAWN_M0], 1
     mov eax, [COLOR_P0]
 M0X:
 
@@ -362,6 +375,59 @@ PURPLE:
 DBG2:
     mov [rdi], eax
     add rdi, 4
+
+    ; Check collisions
+    mov al, [DRAWN_M0]
+    test [DRAWN_P1], al
+    jz C0
+    or BYTE [COLLISION+CXM0P], 80h  ; M0 P1
+C0: test [DRAWN_P0], al
+    jz C1
+    or BYTE [COLLISION+CXM0P], 40h  ; M0 P0
+C1: test [DRAWN_PF], al
+    jz C2
+    or BYTE [COLLISION+CXM0FB], 80h  ; M0 PF
+C2: test [DRAWN_BL], al
+    jz C3
+    or BYTE [COLLISION+CXM0FB], 40h  ; M0 BL
+C3: test [DRAWN_M1], al
+    jz C4
+    or BYTE [COLLISION+CXPPMM], 40h  ; M0 M1
+C4: mov al, [DRAWN_M1]
+    test [DRAWN_P0], al
+    jz C5
+    or BYTE [COLLISION+CXM1P], 80h  ; M1 P0
+C5: test [DRAWN_P1], al
+    jz C6
+    or BYTE [COLLISION+CXM1P], 40h  ; M1 P1
+C6: test [DRAWN_PF], al
+    jz C7
+    or BYTE [COLLISION+CXM1FB], 80h  ; M1 PF
+C7: test [DRAWN_BL], al
+    jz C8
+    or BYTE [COLLISION+CXM1FB], 40h  ; M1 BL
+C8: mov al, [DRAWN_P0]
+    test [DRAWN_PF], al
+    jz C9
+    or BYTE [COLLISION+CXP0FB], 80h  ; P0 PF
+C9: test [DRAWN_BL], al
+    jz C10
+    or BYTE [COLLISION+CXP0FB], 40h  ; P0 BL
+C10:test [DRAWN_P1], al
+    jz C11
+    or BYTE [COLLISION+CXPPMM], 80h  ; P0 P1
+C11:mov al, [DRAWN_P1]
+    test [DRAWN_PF], al
+    jz C12
+    or BYTE [COLLISION+CXP1FB], 80h  ; P1 PF
+C12:test [DRAWN_BL], al
+    jz C13
+    or BYTE [COLLISION+CXP1FB], 40h  ; P1 BL
+C13:mov al, [DRAWN_BL]
+    test [DRAWN_PF], al
+    jz C14
+    or BYTE [COLLISION+CXBLPF], 80h  ; BL PF
+C14:
 
     jmp CNT
 
@@ -450,6 +516,14 @@ POSITION_BL RESB 1
 SIZE_BL     RESB 1
 ENABLE_BLA  RESB 1
 ENABLE_BLB  RESB 1
+
+GLOBAL DRAWN_PF, DRAWN_BL, DRAWN_P0, DRAWN_P1, DRAWN_M, DRAWN_M1
+DRAWN_PF    RESB 1
+DRAWN_BL    RESB 1
+DRAWN_P0    RESB 1
+DRAWN_P1    RESB 1
+DRAWN_M0    RESB 1
+DRAWN_M1    RESB 1 + 2  ; extra padding
 
 %IFNDEF RELEASE
 GLOBAL _pf, _bl, _m0, _m1
