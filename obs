@@ -4,6 +4,9 @@ seaquest
 frostbit
   How to define double size for NUSIZ 06h (3 copies medium)
 
+combat2
+  Playfield synchronization
+
 ---------------
 
 clean frames, no vblank, no vsync

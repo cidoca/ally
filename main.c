@@ -69,9 +69,10 @@ void writingInvalidTIA(int address, int value) {
         || address == 0x2A
 //        || address == 0x2B
     )
-    printf("#### Writing TIA: %6s <- %02X  S/C: %3d/%3d  P: %3d/%4d  M: %3d/%3d\n",
+//    if (SCANLINE != 209) return;
+    printf("#### Writing TIA: %6s <- %02X                                    S/C: %3d/%3d  P: %3d/%3d  M: %3d/%3d B: %d\n",
             address <= 0x2C ? TIA_NAME[address] : "???", value & 0xff,
-            SCANLINE, CLOCKCOUNTS, POSITION_P0, POSITION_P1, POSITION_M0, POSITION_M1);
+            SCANLINE, CLOCKCOUNTS, POSITION_P0, POSITION_P1, POSITION_M0, POSITION_M1, POSITION_BL);
 }
 
 void writingRAM(int address, int value) {
@@ -217,9 +218,7 @@ void mainLoop()
                 done = 1;
         }
 
-#ifndef RELEASE
-//        printf("*** NEW FRAME ***\n");
-#endif
+        printf("\n###### NEW FRAME ########\n\n");
         getControls();
         SDL_LockTexture(texture, NULL, &frameBuffer, &pitch);
         scanFrame(frameBuffer);

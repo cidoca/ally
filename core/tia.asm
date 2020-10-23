@@ -297,10 +297,20 @@ EB0:
     ret
 
 ; * 25
-;GLOBAL _VDELP0
-;_VDELP0:
-;    mov [TIA+VDELP0], al
-;    ret
+GLOBAL _VDELP0
+_VDELP0:
+    mov [TIA+VDELP0], al
+    mov al, [GRP0A]
+    mov [GRP0B], al
+    ret
+
+; * 26
+GLOBAL _VDELP1
+_VDELP1:
+    mov [TIA+VDELP1], al
+    mov al, [GRP1A]
+    mov [GRP1B], al
+    ret
 
 ; * 2A
 GLOBAL _HMOVE
@@ -372,7 +382,7 @@ TIA_REGISTERS:
     DD _COLUPF, _COLUBK, _CTRLPF, _WREG,   _WREG,   _WREG,   _WREG,   _WREG     ; 0
     DD _RESP0,  _RESP1,  _RESM0,  _RESM1,  _RESBL,  _WREG,   _WREG,   _WREG
     DD _WREG,   _WREG,   _WREG,   _GRP0,   _GRP1,   _WREG,   _WREG,   _ENABL    ; 1
-    DD _WREG,   _WREG,   _WREG,   _WREG,   _WREG,   _WREG,   _WREG,   _WREG
+    DD _WREG,   _WREG,   _WREG,   _WREG,   _WREG,   _VDELP0, _VDELP1, _WREG
     DD _WREG,   _WREG,   _HMOVE,  _HMCLR,  _CXCLR,  _RNIMP,  _RNIMP,  _RNIMP    ; 2
     DD _RNIMP,  _RNIMP,  _RNIMP,  _RNIMP,  _RNIMP,  _RNIMP,  _RNIMP,  _RNIMP
     DD _RNIMP,  _RNIMP,  _RNIMP,  _RNIMP,  _RNIMP,  _RNIMP,  _RNIMP,  _RNIMP    ; 3
