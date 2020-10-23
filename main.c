@@ -55,6 +55,7 @@ char *TIA_NAME[64] = { "VSYNC", "VBLANK", "WSYNC", "RSYNC", "NUSIZ0", "NUSIZ1",
                        "HMP0", "HMP1", "HMM0", "HMM1", "HMBL", "VDELP0", "VDELP1",
                        "VDELBL", "RESMP0", "RESMP1", "HMOVE", "HMCLR", "CXCLR" };
 void writingInvalidTIA(int address, int value) {
+//    return;
     if (0
         || 1
 //        || address == 0x00

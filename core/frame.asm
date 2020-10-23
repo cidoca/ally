@@ -100,7 +100,7 @@ newLine:
 pulseTIA:
     test BYTE [TIA+VSYNC], VSYNC_BIT        ; New frame
     jnz endFrame
-    jmp drawBG
+    jmp drawClockCount
 CNT:    
 
     dec BYTE [CLOCKO2]
@@ -110,10 +110,13 @@ CNT:
 NCC:
 
     test BYTE [TIA+WSYNC], 1
-    jnz NTC
+    jz _NTC
+    cmp BYTE [CLOCKCOUNTS], 3
+    jne NTC
+    mov BYTE [TIA+WSYNC], 0
+_NTC:
     mov edx, [nextCpuCycle]
     jmp rdx
-
 NTC:
 
 NTC2:
@@ -121,7 +124,6 @@ NTC2:
     cmp BYTE [CLOCKCOUNTS], 228
     jb pulseTIA
     mov BYTE [CLOCKCOUNTS], 0
-    mov BYTE [TIA+WSYNC], 0
 %IFNDEF RELEASE
     mov BYTE [TIA+HMOVE], 0
 %ENDIF
@@ -133,7 +135,7 @@ NTC2:
 endFrame:
     ret
 
-drawBG:
+drawClockCount:
     mov eax, [COLOR_BK]                 ; Background color
     
     cmp BYTE [CLOCKCOUNTS], 68
