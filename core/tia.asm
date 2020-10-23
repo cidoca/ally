@@ -321,6 +321,7 @@ _HMOVE:
 
     test BYTE [TIA+RESMP0], RESMP_BIT
     jz HM0
+    mov al, [POSITION_P0]
     add al, 6
     mov [POSITION_M0], al
     jmp HM1
@@ -336,6 +337,7 @@ HM1:
 
     test BYTE [TIA+RESMP1], RESMP_BIT
     jz HM2
+    mov al, [POSITION_P1]
     add al, 6
     mov [POSITION_M1], al
     jmp HM3

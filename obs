@@ -7,19 +7,5 @@ frostbit
 combat2
   Playfield synchronization
 
----------------
-
-clean frames, no vblank, no vsync
-  zoofunc
-
-vblank late
-  spidrman, demonatk
-
-no vblank
-  crosfrce
-
-reading interrupt flag
-  shootin
-
-ball reset offset
-  fishdrby
+opensesm
+ Playfield issues
