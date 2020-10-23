@@ -157,6 +157,29 @@ drawClockCount:
     call drawPlayfiled
 PFA:
 
+%MACRO __DRAW_PLAYER 1
+    mov cl, [SIZE_P%1]
+    shr cl, 4
+    sub dl, [CLOCKCOUNTS]
+    dec dl
+    shr dl, cl
+    mov cl, dl
+    test BYTE [TIA+REFP%1], REFP_BIT
+    jz %%A
+    mov dl, 80h
+    shr dl, cl
+    jmp %%B
+%%A:
+    mov dl, 1
+    shl dl, cl
+%%B:
+    test [GRP%1B], dl
+    jz %%C
+    mov BYTE [DRAWN_P%1], 1
+    mov eax, [COLOR_P%1]
+%%C:
+%ENDMACRO
+
     test BYTE [GRP1B], 0FFh
     jz P13X
 
@@ -167,18 +190,7 @@ PFA:
     add dl, [SIZE_P1]
     cmp [CLOCKCOUNTS], dl
     jae P1X
-    mov cl, [SIZE_P1]
-    shr cl, 4
-    sub dl, [CLOCKCOUNTS]
-    dec dl
-    shr dl, cl
-    mov cl, dl
-    mov dl, 1
-    shl dl, cl
-    test [GRP1B], dl
-    jz P1X
-    mov BYTE [DRAWN_P1], 1
-    mov eax, [COLOR_P1]
+    __DRAW_PLAYER 1
 P1X:
 
     ; Player 1-2
@@ -191,18 +203,7 @@ P1X:
     add dl, [SIZE_P1]
     cmp [CLOCKCOUNTS], dl
     jae P12X
-    mov cl, [SIZE_P1]
-    shr cl, 4
-    sub dl, [CLOCKCOUNTS]
-    dec dl
-    shr dl, cl
-    mov cl, dl
-    mov dl, 1
-    shl dl, cl
-    test [GRP1B], dl
-    jz P12X
-    mov BYTE [DRAWN_P1], 1
-    mov eax, [COLOR_P1]
+    __DRAW_PLAYER 1
 P12X:
 
     ; Player 1-3
@@ -217,18 +218,7 @@ P12X:
     add dl, [SIZE_P1]
     cmp [CLOCKCOUNTS], dl
     jae P13X
-    mov cl, [SIZE_P1]
-    shr cl, 4
-    sub dl, [CLOCKCOUNTS]
-    dec dl
-    shr dl, cl
-    mov cl, dl
-    mov dl, 1
-    shl dl, cl
-    test [GRP1B], dl
-    jz P13X
-    mov BYTE [DRAWN_P1], 1
-    mov eax, [COLOR_P1]
+    __DRAW_PLAYER 1
 P13X:
 
     ; Missile 1
@@ -260,18 +250,7 @@ M1X:
     add dl, [SIZE_P0]
     cmp [CLOCKCOUNTS], dl
     jae P0X
-    mov cl, [SIZE_P0]
-    shr cl, 4
-    sub dl, [CLOCKCOUNTS]
-    dec dl
-    shr dl, cl
-    mov cl, dl
-    mov dl, 1
-    shl dl, cl
-    test [GRP0B], dl
-    jz P0X
-    mov BYTE [DRAWN_P0], 1
-    mov eax, [COLOR_P0]
+    __DRAW_PLAYER 0
 P0X:
 
     ; Player 0-2
@@ -284,18 +263,7 @@ P0X:
     add dl, [SIZE_P0]
     cmp [CLOCKCOUNTS], dl
     jae P02X
-    mov cl, [SIZE_P0]
-    shr cl, 4
-    sub dl, [CLOCKCOUNTS]
-    dec dl
-    shr dl, cl
-    mov cl, dl
-    mov dl, 1
-    shl dl, cl
-    test [GRP0B], dl
-    jz P02X
-    mov BYTE [DRAWN_P0], 1
-    mov eax, [COLOR_P0]
+    __DRAW_PLAYER 0
 P02X:
 
     ; Player 0-3
@@ -310,18 +278,7 @@ P02X:
     add dl, [SIZE_P0]
     cmp [CLOCKCOUNTS], dl
     jae P03X
-    mov cl, [SIZE_P0]
-    shr cl, 4
-    sub dl, [CLOCKCOUNTS]
-    dec dl
-    shr dl, cl
-    mov cl, dl
-    mov dl, 1
-    shl dl, cl
-    test [GRP0B], dl
-    jz P03X
-    mov BYTE [DRAWN_P0], 1
-    mov eax, [COLOR_P0]
+    __DRAW_PLAYER 0
 P03X:
 
     ; Missile 0
