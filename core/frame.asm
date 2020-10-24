@@ -28,10 +28,6 @@ SECTION .text
 ; ******************
 GLOBAL drawPlayfiled
 drawPlayfiled:
-%IFNDEF RELEASE
-    test BYTE [_pf], 1
-    jz PFX
-%ENDIF
     movzx edx, BYTE [CLOCKCOUNTS]
     sub dl, 68
     shr dl, 2
@@ -44,7 +40,11 @@ PF_REF:
 PF_TEST:
     test DWORD [TIA+PF0], edx
     jz PFX
-    mov BYTE [DRAWN_PF], 1
+    or BYTE [COLLISION_MASK], 16 ; PF
+%IFNDEF RELEASE
+    test BYTE [_pf], 1
+    jz PFX
+%ENDIF
     test BYTE [TIA+CTRLPF], CTRLPF_SCORE
     jnz PF_P
     mov eax, [COLOR_PF]
@@ -59,10 +59,6 @@ PF_P1:
 PFX:
 
     ; Ball
-%IFNDEF RELEASE
-    test BYTE [_bl], 1
-    jz BLX
-%ENDIF
     test BYTE [ENABLE_BLB], ENA_BIT
     jz BLX
     mov dl, [POSITION_BL]
@@ -71,7 +67,11 @@ PFX:
     add dl, [SIZE_BL]
     cmp [CLOCKCOUNTS], dl
     jae BLX
-    mov BYTE [DRAWN_BL], 1
+    or BYTE [COLLISION_MASK], 32 ; BL
+%IFNDEF RELEASE
+    test BYTE [_bl], 1
+    jz BLX
+%ENDIF
     mov eax, [COLOR_PF]
 BLX:
     ret
@@ -142,8 +142,7 @@ drawClockCount:
     jb DBG1
 
     ; Clear internal collision flags
-    xor rdx, rdx
-    mov [DRAWN_PF], rdx
+    mov BYTE [COLLISION_MASK], 0
 
     ;mov dl, [CLOCKCOUNTS]
     ;sub dl, 68
@@ -158,7 +157,7 @@ drawClockCount:
     call drawPlayfiled
 PFA:
 
-%MACRO __DRAW_PLAYER_AUX 1
+%MACRO __DRAW_PLAYER_AUX 2
     test BYTE [TIA+REFP%1], REFP_BIT
     jz %%A
     mov dl, 80h
@@ -170,25 +169,25 @@ PFA:
 %%B:
     test [GRP%1B], dl
     jz %%C
-    mov BYTE [DRAWN_P%1], 1
+    or BYTE [COLLISION_MASK], %2
     mov eax, [COLOR_P%1]
 %%C:
 %ENDMACRO
 
-%MACRO __DRAW_PLAYER 1
+%MACRO __DRAW_PLAYER 2
     mov cl, [SIZE_P%1]
     shr cl, 4
     sub dl, [CLOCKCOUNTS]
     dec dl
     shr dl, cl
     mov cl, dl
-    __DRAW_PLAYER_AUX %1
+    __DRAW_PLAYER_AUX %1, %2
 %ENDMACRO
 
-%MACRO __DRAW_PLAYER_COPY 1
+%MACRO __DRAW_PLAYER_COPY 2
     sub cl, [CLOCKCOUNTS]
     dec cl
-    __DRAW_PLAYER_AUX %1
+    __DRAW_PLAYER_AUX %1, %2
 %ENDMACRO
 
     test BYTE [GRP1B], 0FFh
@@ -201,7 +200,7 @@ PFA:
     add dl, [SIZE_P1]
     cmp [CLOCKCOUNTS], dl
     jae P1X
-    __DRAW_PLAYER 1
+    __DRAW_PLAYER 1, 2 ; P1
     jmp P13X
 P1X:
 
@@ -215,7 +214,7 @@ P1X:
     add cl, 8
     cmp [CLOCKCOUNTS], cl
     jae P12X
-    __DRAW_PLAYER_COPY 1
+    __DRAW_PLAYER_COPY 1, 2 ; P1
     jmp P13X
 P12X:
 
@@ -231,13 +230,8 @@ P12X:
     add cl, 8
     cmp [CLOCKCOUNTS], cl
     jae P13X
-    __DRAW_PLAYER_COPY 1
+    __DRAW_PLAYER_COPY 1, 2 ; P1
 P13X:
-
-%IFNDEF RELEASE
-    test BYTE [_m1], 1
-    jz M1X
-%ENDIF
 
     test BYTE [TIA+ENAM1], ENA_BIT
     jz M1X
@@ -251,7 +245,11 @@ P13X:
     add dl, [SIZE_M1]
     cmp [CLOCKCOUNTS], dl
     jae M1X0
-    mov BYTE [DRAWN_M1], 1
+    or BYTE [COLLISION_MASK], 8 ; M1
+%IFNDEF RELEASE
+    test BYTE [_m1], 1
+    jz M1X
+%ENDIF
     mov eax, [COLOR_P1]
     jmp M1X
 
@@ -265,7 +263,11 @@ M1X0:
     add dl, [SIZE_M1]
     cmp [CLOCKCOUNTS], dl
     jae M1X1
-    mov BYTE [DRAWN_M1], 1
+    or BYTE [COLLISION_MASK], 8 ; M1
+%IFNDEF RELEASE
+    test BYTE [_m1], 1
+    jz M1X
+%ENDIF
     mov eax, [COLOR_P1]
     jmp M1X
 
@@ -280,7 +282,11 @@ M1X1:
     add dl, [SIZE_M1]
     cmp [CLOCKCOUNTS], dl
     jae M1X
-    mov BYTE [DRAWN_M1], 1
+    or BYTE [COLLISION_MASK], 8 ; M1
+%IFNDEF RELEASE
+    test BYTE [_m1], 1
+    jz M1X
+%ENDIF
     mov eax, [COLOR_P1]
 
 M1X:
@@ -295,7 +301,7 @@ M1X:
     add dl, [SIZE_P0]
     cmp [CLOCKCOUNTS], dl
     jae P0X
-    __DRAW_PLAYER 0
+    __DRAW_PLAYER 0, 1 ; P0
     jmp P03X
 P0X:
 
@@ -309,7 +315,7 @@ P0X:
     add cl, [SIZE_P0]
     cmp [CLOCKCOUNTS], cl
     jae P02X
-    __DRAW_PLAYER_COPY 0
+    __DRAW_PLAYER_COPY 0, 1 ; P0
     jmp P03X
 P02X:
 
@@ -325,13 +331,8 @@ P02X:
     add cl, [SIZE_P0]
     cmp [CLOCKCOUNTS], cl
     jae P03X
-    __DRAW_PLAYER_COPY 0
+    __DRAW_PLAYER_COPY 0, 1 ; P0
 P03X:
-
-%IFNDEF RELEASE
-    test BYTE [_m0], 1
-    jz M0X
-%ENDIF
 
     test BYTE [TIA+ENAM0], ENA_BIT
     jz M0X
@@ -345,7 +346,11 @@ P03X:
     add dl, [SIZE_M0]
     cmp [CLOCKCOUNTS], dl
     jae M0X0
-    mov BYTE [DRAWN_M0], 1
+    or BYTE [COLLISION_MASK], 4 ; M0
+%IFNDEF RELEASE
+    test BYTE [_m0], 1
+    jz M0X
+%ENDIF
     mov eax, [COLOR_P0]
     jmp M0X
 
@@ -359,7 +364,11 @@ M0X0:
     add dl, [SIZE_M0]
     cmp [CLOCKCOUNTS], dl
     jae M0X1
-    mov BYTE [DRAWN_M0], 1
+    or BYTE [COLLISION_MASK], 4 ; M0
+%IFNDEF RELEASE
+    test BYTE [_m0], 1
+    jz M0X
+%ENDIF
     mov eax, [COLOR_P0]
     jmp M0X
 
@@ -374,7 +383,11 @@ M0X1:
     add dl, [SIZE_M0]
     cmp [CLOCKCOUNTS], dl
     jae M0X
-    mov BYTE [DRAWN_M0], 1
+    or BYTE [COLLISION_MASK], 4 ; M0
+%IFNDEF RELEASE
+    test BYTE [_m0], 1
+    jz M0X
+%ENDIF
     mov eax, [COLOR_P0]
 
 M0X:
@@ -384,64 +397,9 @@ M0X:
     call drawPlayfiled
 PFB:
 
-    ; Check collisions
-    mov dl, [DRAWN_M0]
-    or dl, dl
-    jz C4
-    test [DRAWN_P1], dl
-    jz C0
-    or BYTE [COLLISION+CXM0P], 80h  ; M0 P1
-C0: test [DRAWN_P0], dl
-    jz C1
-    or BYTE [COLLISION+CXM0P], 40h  ; M0 P0
-C1: test [DRAWN_PF], dl
-    jz C2
-    or BYTE [COLLISION+CXM0FB], 80h  ; M0 PF
-C2: test [DRAWN_BL], dl
-    jz C3
-    or BYTE [COLLISION+CXM0FB], 40h  ; M0 BL
-C3: test [DRAWN_M1], dl
-    jz C4
-    or BYTE [COLLISION+CXPPMM], 40h  ; M0 M1
-C4: mov dl, [DRAWN_M1]
-    or dl, dl
-    jz C8
-    test [DRAWN_P0], dl
-    jz C5
-    or BYTE [COLLISION+CXM1P], 80h  ; M1 P0
-C5: test [DRAWN_P1], dl
-    jz C6
-    or BYTE [COLLISION+CXM1P], 40h  ; M1 P1
-C6: test [DRAWN_PF], dl
-    jz C7
-    or BYTE [COLLISION+CXM1FB], 80h  ; M1 PF
-C7: test [DRAWN_BL], dl
-    jz C8
-    or BYTE [COLLISION+CXM1FB], 40h  ; M1 BL
-C8: mov dl, [DRAWN_P0]
-    or dl, dl
-    jz C11
-    test [DRAWN_PF], dl
-    jz C9
-    or BYTE [COLLISION+CXP0FB], 80h  ; P0 PF
-C9: test [DRAWN_BL], dl
-    jz C10
-    or BYTE [COLLISION+CXP0FB], 40h  ; P0 BL
-C10:test [DRAWN_P1], dl
-    jz C11
-    or BYTE [COLLISION+CXPPMM], 80h  ; P0 P1
-C11:mov dl, [DRAWN_P1]
-    test [DRAWN_PF], dl
-    jz C12
-    or BYTE [COLLISION+CXP1FB], 80h  ; P1 PF
-C12:test [DRAWN_BL], dl
-    jz C13
-    or BYTE [COLLISION+CXP1FB], 40h  ; P1 BL
-C13:mov dl, [DRAWN_BL]
-    test [DRAWN_PF], dl
-    jz C14
-    or BYTE [COLLISION+CXBLPF], 80h  ; BL PF
-C14:
+    movzx edx, BYTE [COLLISION_MASK]
+    mov rdx, [COLLISION_TABLE+rdx*8]
+    or [COLLISION], rdx
 
 DBG1:
 
@@ -505,7 +463,7 @@ PALETTE:
     DD 0283000h, 0485018h, 0687030h, 0808C48h, 098A860h, 0B0C078h, 0C8D488h, 0E0EC98h
     DD 0402800h, 0604818h, 0806830h, 0A08440h, 0B89C58h, 0D0B468h, 0E8CC78h, 0F8E088h
 
-GLOBAL PLAYFIELD_MASK
+GLOBAL PLAYFIELD_TABLE
 PLAYFIELD_TABLE:
     DD 000010h, 000020h, 000040h, 000080h
     DD 008000h, 004000h, 002000h, 001000h, 000800h, 000400h, 000200h, 000100h
@@ -522,6 +480,25 @@ PLAYFIELD_TABLE_REF:
     DD 800000h, 400000h, 200000h, 100000h, 080000h, 040000h, 020000h, 010000h
     DD 000100h, 000200h, 000400h, 000800h, 001000h, 002000h, 004000h, 008000h
     DD 000080h, 000040h, 000020h, 000010h
+
+GLOBAL COLLISION_TABLE
+COLLISION_TABLE:
+    DQ 00000000000000000h, 00000000000000000h, 00000000000000000h, 08000000000000000h
+    DQ 00000000000000000h, 00000000000000040h, 00000000000000080h, 080000000000000C0h
+    DQ 00000000000000000h, 00000000000008000h, 00000000000004000h, 0800000000000C000h
+    DQ 04000000000000000h, 04000000000008040h, 04000000000004080h, 0C00000000000C0C0h
+    DQ 00000000000000000h, 00000000000800000h, 00000000080000000h, 08000000080800000h
+    DQ 00000008000000000h, 00000008000800040h, 00000008080000080h, 080000080808000C0h
+    DQ 00000800000000000h, 00000800000808000h, 00000800080004000h, 0800080008080C000h
+    DQ 04000808000000000h, 04000808000808040h, 04000808080004080h, 0C00080808080C0C0h
+    DQ 00000000000000000h, 00000000000400000h, 00000000040000000h, 08000000040400000h
+    DQ 00000004000000000h, 00000004000400040h, 00000004040000080h, 080000040404000C0h
+    DQ 00000400000000000h, 00000400000408000h, 00000400040004000h, 0800040004040C000h
+    DQ 04000404000000000h, 04000404000408040h, 04000404040004080h, 0C00040404040C0C0h
+    DQ 00080000000000000h, 00080000000C00000h, 000800000C0000000h, 080800000C0C00000h
+    DQ 0008000C000000000h, 0008000C000C00040h, 0008000C0C0000080h, 0808000C0C0C000C0h
+    DQ 00080C00000000000h, 00080C00000C08000h, 00080C000C0004000h, 08080C000C0C0C000h
+    DQ 04080C0C000000000h, 04080C0C000C08040h, 04080C0C0C0004080h, 0C080C0C0C0C0C0C0h
 
 SECTION .bss
 
@@ -569,13 +546,8 @@ SIZE_BL     RESB 1
 ENABLE_BLA  RESB 1
 ENABLE_BLB  RESB 1
 
-GLOBAL DRAWN_PF, DRAWN_BL, DRAWN_P0, DRAWN_P1, DRAWN_M, DRAWN_M1
-DRAWN_PF    RESB 1
-DRAWN_BL    RESB 1
-DRAWN_P0    RESB 1
-DRAWN_P1    RESB 1
-DRAWN_M0    RESB 1
-DRAWN_M1    RESB 1 + 2  ; extra padding
+GLOBAL COLLISION_MASK
+COLLISION_MASK  RESB 1
 
 %IFNDEF RELEASE
 GLOBAL _pf, _bl, _m0, _m1
