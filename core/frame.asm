@@ -158,13 +158,7 @@ drawClockCount:
     call drawPlayfiled
 PFA:
 
-%MACRO __DRAW_PLAYER 1
-    mov cl, [SIZE_P%1]
-    shr cl, 4
-    sub dl, [CLOCKCOUNTS]
-    dec dl
-    shr dl, cl
-    mov cl, dl
+%MACRO __DRAW_PLAYER_AUX 1
     test BYTE [TIA+REFP%1], REFP_BIT
     jz %%A
     mov dl, 80h
@@ -179,6 +173,22 @@ PFA:
     mov BYTE [DRAWN_P%1], 1
     mov eax, [COLOR_P%1]
 %%C:
+%ENDMACRO
+
+%MACRO __DRAW_PLAYER 1
+    mov cl, [SIZE_P%1]
+    shr cl, 4
+    sub dl, [CLOCKCOUNTS]
+    dec dl
+    shr dl, cl
+    mov cl, dl
+    __DRAW_PLAYER_AUX %1
+%ENDMACRO
+
+%MACRO __DRAW_PLAYER_COPY 1
+    sub cl, [CLOCKCOUNTS]
+    dec cl
+    __DRAW_PLAYER_AUX %1
 %ENDMACRO
 
     test BYTE [GRP1B], 0FFh
@@ -198,30 +208,30 @@ P1X:
     ; Player 1-2
     cmp BYTE [COPIES_P1], 2
     jb P13X
-    mov dl, [POSITION_P1]
-    add dl, [SPACES_P1]
-    cmp [CLOCKCOUNTS], dl
+    mov cl, [POSITION_P1]
+    add cl, [SPACES_P1]
+    cmp [CLOCKCOUNTS], cl
     jb P12X
-    add dl, [SIZE_P1]
-    cmp [CLOCKCOUNTS], dl
+    add cl, 8
+    cmp [CLOCKCOUNTS], cl
     jae P12X
-    __DRAW_PLAYER 1
+    __DRAW_PLAYER_COPY 1
     jmp P13X
 P12X:
 
     ; Player 1-3
     cmp BYTE [COPIES_P1], 3
     jb P13X
-    mov dl, [POSITION_P1]
-    mov cl, [SPACES_P1]
-    add dl, cl
-    add dl, cl
-    cmp [CLOCKCOUNTS], dl
+    mov cl, [POSITION_P1]
+    mov dl, [SPACES_P1]
+    add cl, dl
+    add cl, dl
+    cmp [CLOCKCOUNTS], cl
     jb P13X
-    add dl, [SIZE_P1]
-    cmp [CLOCKCOUNTS], dl
+    add cl, 8
+    cmp [CLOCKCOUNTS], cl
     jae P13X
-    __DRAW_PLAYER 1
+    __DRAW_PLAYER_COPY 1
 P13X:
 
 %IFNDEF RELEASE
@@ -292,30 +302,30 @@ P0X:
     ; Player 0-2
     cmp BYTE [COPIES_P0], 2
     jb P03X
-    mov dl, [POSITION_P0]
-    add dl, [SPACES_P0]
-    cmp [CLOCKCOUNTS], dl
+    mov cl, [POSITION_P0]
+    add cl, [SPACES_P0]
+    cmp [CLOCKCOUNTS], cl
     jb P02X
-    add dl, [SIZE_P0]
-    cmp [CLOCKCOUNTS], dl
+    add cl, [SIZE_P0]
+    cmp [CLOCKCOUNTS], cl
     jae P02X
-    __DRAW_PLAYER 0
+    __DRAW_PLAYER_COPY 0
     jmp P03X
 P02X:
 
     ; Player 0-3
     cmp BYTE [COPIES_P0], 3
     jb P03X
-    mov dl, [POSITION_P0]
-    mov cl, [SPACES_P0]
-    add dl, cl
-    add dl, cl
-    cmp [CLOCKCOUNTS], dl
+    mov cl, [POSITION_P0]
+    mov dl, [SPACES_P0]
+    add cl, dl
+    add cl, dl
+    cmp [CLOCKCOUNTS], cl
     jb P03X
-    add dl, [SIZE_P0]
-    cmp [CLOCKCOUNTS], dl
+    add cl, [SIZE_P0]
+    cmp [CLOCKCOUNTS], cl
     jae P03X
-    __DRAW_PLAYER 0
+    __DRAW_PLAYER_COPY 0
 P03X:
 
 %IFNDEF RELEASE
