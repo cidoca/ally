@@ -141,6 +141,7 @@ drawClockCount:
     cmp BYTE [CLOCKCOUNTS], 68
     jb DBG1
 
+    ; Clear internal collision flags
     xor rdx, rdx
     mov [DRAWN_PF], rdx
 
@@ -191,11 +192,12 @@ PFA:
     cmp [CLOCKCOUNTS], dl
     jae P1X
     __DRAW_PLAYER 1
+    jmp P13X
 P1X:
 
     ; Player 1-2
     cmp BYTE [COPIES_P1], 2
-    jb P12X
+    jb P13X
     mov dl, [POSITION_P1]
     add dl, [SPACES_P1]
     cmp [CLOCKCOUNTS], dl
@@ -204,6 +206,7 @@ P1X:
     cmp [CLOCKCOUNTS], dl
     jae P12X
     __DRAW_PLAYER 1
+    jmp P13X
 P12X:
 
     ; Player 1-3
@@ -221,16 +224,47 @@ P12X:
     __DRAW_PLAYER 1
 P13X:
 
-    ; Missile 1
 %IFNDEF RELEASE
     test BYTE [_m1], 1
     jz M1X
 %ENDIF
+
     test BYTE [TIA+ENAM1], ENA_BIT
     jz M1X
     test BYTE [TIA+RESMP1], RESMP_BIT
     jnz M1X
+
+    ; Missile 1
     mov dl, [POSITION_M1]
+    cmp [CLOCKCOUNTS], dl
+    jb M1X0
+    add dl, [SIZE_M1]
+    cmp [CLOCKCOUNTS], dl
+    jae M1X0
+    mov BYTE [DRAWN_M1], 1
+    mov eax, [COLOR_P1]
+    jmp M1X
+
+M1X0:
+    cmp BYTE [COPIES_P1], 2
+    jb M1X
+    mov dl, [POSITION_M1]
+    add dl, [SPACES_P1]
+    cmp [CLOCKCOUNTS], dl
+    jb M1X1
+    add dl, [SIZE_M1]
+    cmp [CLOCKCOUNTS], dl
+    jae M1X1
+    mov BYTE [DRAWN_M1], 1
+    mov eax, [COLOR_P1]
+    jmp M1X
+
+M1X1:
+    cmp BYTE [COPIES_P1], 3
+    jb M1X
+    mov dl, [POSITION_M1]
+    add dl, [SPACES_P1]
+    add dl, [SPACES_P1]
     cmp [CLOCKCOUNTS], dl
     jb M1X
     add dl, [SIZE_M1]
@@ -238,6 +272,7 @@ P13X:
     jae M1X
     mov BYTE [DRAWN_M1], 1
     mov eax, [COLOR_P1]
+
 M1X:
 
     test BYTE [GRP0B], 0FFh
@@ -251,11 +286,12 @@ M1X:
     cmp [CLOCKCOUNTS], dl
     jae P0X
     __DRAW_PLAYER 0
+    jmp P03X
 P0X:
 
     ; Player 0-2
     cmp BYTE [COPIES_P0], 2
-    jb P02X
+    jb P03X
     mov dl, [POSITION_P0]
     add dl, [SPACES_P0]
     cmp [CLOCKCOUNTS], dl
@@ -264,6 +300,7 @@ P0X:
     cmp [CLOCKCOUNTS], dl
     jae P02X
     __DRAW_PLAYER 0
+    jmp P03X
 P02X:
 
     ; Player 0-3
@@ -281,16 +318,47 @@ P02X:
     __DRAW_PLAYER 0
 P03X:
 
-    ; Missile 0
 %IFNDEF RELEASE
     test BYTE [_m0], 1
     jz M0X
 %ENDIF
+
     test BYTE [TIA+ENAM0], ENA_BIT
     jz M0X
     test BYTE [TIA+RESMP0], RESMP_BIT
     jnz M0X
+
+    ; Missile 0
     mov dl, [POSITION_M0]
+    cmp [CLOCKCOUNTS], dl
+    jb M0X0
+    add dl, [SIZE_M0]
+    cmp [CLOCKCOUNTS], dl
+    jae M0X0
+    mov BYTE [DRAWN_M0], 1
+    mov eax, [COLOR_P0]
+    jmp M0X
+
+M0X0:
+    cmp BYTE [COPIES_P0], 2
+    jb M0X
+    mov dl, [POSITION_M0]
+    add dl, [SPACES_P0]
+    cmp [CLOCKCOUNTS], dl
+    jb M0X1
+    add dl, [SIZE_M0]
+    cmp [CLOCKCOUNTS], dl
+    jae M0X1
+    mov BYTE [DRAWN_M0], 1
+    mov eax, [COLOR_P0]
+    jmp M0X
+
+M0X1:
+    cmp BYTE [COPIES_P0], 3
+    jb M0X
+    mov dl, [POSITION_M0]
+    add dl, [SPACES_P0]
+    add dl, [SPACES_P0]
     cmp [CLOCKCOUNTS], dl
     jb M0X
     add dl, [SIZE_M0]
@@ -298,6 +366,7 @@ P03X:
     jae M0X
     mov BYTE [DRAWN_M0], 1
     mov eax, [COLOR_P0]
+
 M0X:
 
     test BYTE [TIA+CTRLPF], CTRLPF_PFP

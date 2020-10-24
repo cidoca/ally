@@ -312,6 +312,30 @@ _VDELP1:
     mov [GRP1B], al
     ret
 
+; * 28
+GLOBAL _RESMP0
+_RESMP0:
+    mov [TIA+RESMP0], al
+    test al, RESMP_BIT
+    jz RMP0
+    mov al, [POSITION_P0]
+    add al, 4
+    mov [POSITION_M0], al
+RMP0:
+    ret
+
+; * 29
+GLOBAL _RESMP1
+_RESMP1:
+    mov [TIA+RESMP1], al
+    test al, RESMP_BIT
+    jz RMP1
+    mov al, [POSITION_P1]
+    add al, 4
+    mov [POSITION_M1], al
+RMP1:
+    ret
+
 ; * 2A
 GLOBAL _HMOVE
 _HMOVE:
@@ -322,7 +346,7 @@ _HMOVE:
     test BYTE [TIA+RESMP0], RESMP_BIT
     jz HM0
     mov al, [POSITION_P0]
-    add al, 6
+    add al, 4
     mov [POSITION_M0], al
     jmp HM1
 HM0:
@@ -338,7 +362,7 @@ HM1:
     test BYTE [TIA+RESMP1], RESMP_BIT
     jz HM2
     mov al, [POSITION_P1]
-    add al, 6
+    add al, 4
     mov [POSITION_M1], al
     jmp HM3
 HM2:
@@ -385,13 +409,12 @@ TIA_REGISTERS:
     DD _RESP0,  _RESP1,  _RESM0,  _RESM1,  _RESBL,  _WREG,   _WREG,   _WREG
     DD _WREG,   _WREG,   _WREG,   _GRP0,   _GRP1,   _WREG,   _WREG,   _ENABL    ; 1
     DD _WREG,   _WREG,   _WREG,   _WREG,   _WREG,   _VDELP0, _VDELP1, _WREG
-    DD _WREG,   _WREG,   _HMOVE,  _HMCLR,  _CXCLR,  _RNIMP,  _RNIMP,  _RNIMP    ; 2
+    DD _RESMP0, _RESMP1, _HMOVE,  _HMCLR,  _CXCLR,  _RNIMP,  _RNIMP,  _RNIMP    ; 2
     DD _RNIMP,  _RNIMP,  _RNIMP,  _RNIMP,  _RNIMP,  _RNIMP,  _RNIMP,  _RNIMP
     DD _RNIMP,  _RNIMP,  _RNIMP,  _RNIMP,  _RNIMP,  _RNIMP,  _RNIMP,  _RNIMP    ; 3
 
 GLOBAL GRP_COPIES, GRP_SIZES, GRP_SPACES
 GRP_COPIES      DB 1, 2, 2, 3, 2, 1, 3, 1
-;GRP_SIZES       DB 8, 8, 8, 8, 8, 16, 16, 32
 GRP_SIZES       DB 8, 8, 8, 8, 8, 16, 8, 32
 GRP_SPACES      DB 0, 16, 32, 16, 64, 0, 32, 0
 

@@ -57,17 +57,18 @@ char *TIA_NAME[64] = { "VSYNC", "VBLANK", "WSYNC", "RSYNC", "NUSIZ0", "NUSIZ1",
 void writingInvalidTIA(int address, int value) {
 //    return;
     if (0
-        || 1
+//        || 1
 //        || address == 0x00
 //        || address == 0x01
-        || address == 0x03
-        || address == 0x08
-        || address == 0x0F
+//        || address == 0x03
+//        || address == 0x08
+//        || address == 0x0F
 //        || address == 0x14
 //        || address == 0x1F
 //        || address == 0x24
-        || address == 0x2A
+//        || address == 0x2A
 //        || address == 0x2B
+//        || (address >= 0x15 && address <= 0x1A)   // Sound
     )
 //    if (SCANLINE != 209) return;
     printf("#### Writing TIA: %6s <- %02X                                    S/C: %3d/%3d  P: %3d/%3d  M: %3d/%3d B: %d\n",
@@ -218,7 +219,7 @@ void mainLoop()
                 done = 1;
         }
 
-        printf("\n###### NEW FRAME ########\n\n");
+//        printf("\n###### NEW FRAME ########\n\n");
         getControls();
         SDL_LockTexture(texture, NULL, &frameBuffer, &pitch);
         scanFrame(frameBuffer);
@@ -226,6 +227,7 @@ void mainLoop()
         SDL_RenderCopy(renderer, texture, NULL, NULL);
         SDL_RenderPresent(renderer);
 
+//        SDL_Delay(200);
         t += (tf++ % 3 == 0) ? 16 : 17;
         tc = SDL_GetTicks();
         if (t > tc)
