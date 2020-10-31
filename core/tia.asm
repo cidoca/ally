@@ -381,6 +381,29 @@ HM3:
 HM4:
     ret
 
+; 15/16
+GLOBAL _AUDCX
+_AUDCX:
+    and al, 0Fh
+    mov [TIA+rsi], al
+    ret
+
+; 17/18
+GLOBAL _AUDFX
+_AUDFX:
+    and al, 01Fh
+    inc al
+    mov [TIA+rsi], al
+    ret
+
+; 19/1A
+GLOBAL _AUDVX
+_AUDVX:
+    and al, 0Fh
+    shl al, 1
+    mov [TIA+rsi], al
+    ret
+
 ; * Clears all horizontal motion registers to zero (no motion) - 2B
 ; *******************************************************************
 GLOBAL _HMCLR
@@ -406,8 +429,8 @@ TIA_REGISTERS:
     ;    0/8      1/9      2/A      3/B      4/C      5/D      6/E      7/F
     DD _WREG,   _WREG,   _WSYNC,  _RNIMP,  _NUSIZ0, _NUSIZ1, _COLUP0, _COLUP1
     DD _COLUPF, _COLUBK, _CTRLPF, _WREG,   _WREG,   _WREG,   _WREG,   _WREG     ; 0
-    DD _RESP0,  _RESP1,  _RESM0,  _RESM1,  _RESBL,  _WREG,   _WREG,   _WREG
-    DD _WREG,   _WREG,   _WREG,   _GRP0,   _GRP1,   _WREG,   _WREG,   _ENABL    ; 1
+    DD _RESP0,  _RESP1,  _RESM0,  _RESM1,  _RESBL,  _AUDCX,  _AUDCX,  _AUDFX
+    DD _AUDFX,  _AUDVX,  _AUDVX,  _GRP0,   _GRP1,   _WREG,   _WREG,   _ENABL    ; 1
     DD _WREG,   _WREG,   _WREG,   _WREG,   _WREG,   _VDELP0, _VDELP1, _WREG
     DD _RESMP0, _RESMP1, _HMOVE,  _HMCLR,  _CXCLR,  _RNIMP,  _RNIMP,  _RNIMP    ; 2
     DD _RNIMP,  _RNIMP,  _RNIMP,  _RNIMP,  _RNIMP,  _RNIMP,  _RNIMP,  _RNIMP

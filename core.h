@@ -31,3 +31,6 @@ void initRIOT();
 void nextTimerCycle();
 void initTIA();
 void scanFrame(void *);
+
+void initSound();
+void fillSoundBuffer(void *userdata, Uint8 *stream, int len);

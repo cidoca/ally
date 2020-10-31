@@ -28,6 +28,7 @@ Uint8 *keys;
 SDL_Window *win;
 SDL_Renderer *renderer;
 SDL_Texture *texture;
+int audio_present = 1;
 
 #ifndef RELEASE
 void opcodeNotImplemented() {
@@ -87,11 +88,20 @@ void readingIO(int address) {
 }
 #endif
 
+unsigned int ts = 0, ts2;
+void preFillSoundBuffer(void *userdata, Uint8 *stream, int len)
+{
+    ts = SDL_GetTicks();
+    printf("fillSoundBuffer S/C: %3d/%3d %p %d %d\n", SCANLINE, CLOCKCOUNTS, stream, len, ts - ts2);
+    ts2 = ts;
+    fillSoundBuffer(userdata, stream, len);
+}
+
 void initSDL(char *filename)
 {
     char title[FILENAME_MAX];
 
-    if (SDL_Init(SDL_INIT_VIDEO /*| SDL_INIT_AUDIO | SDL_INIT_JOYSTICK*/ | SDL_INIT_TIMER) < 0) {
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO /*| SDL_INIT_JOYSTICK*/ | SDL_INIT_TIMER) < 0) {
         printf("Error initializing SDL: %s\n", SDL_GetError());
         exit(-1);
     }
@@ -106,21 +116,22 @@ void initSDL(char *filename)
 
     // Setup keyboard and joysticks
     keys = (Uint8*)SDL_GetKeyboardState(NULL);
-/*    joy1 = SDL_JoystickOpen(0);
-    joy2 = SDL_JoystickOpen(1);
+//    joy1 = SDL_JoystickOpen(0);
+//    joy2 = SDL_JoystickOpen(1);
 
     // Setup audio
     SDL_AudioSpec wanted;
-    wanted.freq = 48000;
+    wanted.freq = 31440;
     wanted.format = AUDIO_U8;
-    wanted.channels = 1;
+    wanted.channels = 2;
     wanted.samples = wanted.freq / 60 * 2;
-    wanted.callback = make_PSG;
+//    wanted.callback = preFillSoundBuffer;
+    wanted.callback = fillSoundBuffer;
     wanted.userdata = NULL;
     if (SDL_OpenAudio(&wanted, NULL) < 0) {
         audio_present = 0;
         printf("Could not open audio: %s\n", SDL_GetError());
-    }*/
+    }
 
     // Ignore keyboard and mouse events
     SDL_EventState(SDL_KEYDOWN, SDL_IGNORE);
@@ -134,8 +145,8 @@ void initSDL(char *filename)
 
 void deinitSDL()
 {
-/*    SDL_CloseAudio();
-    if (joy2)
+    SDL_CloseAudio();
+/*    if (joy2)
         SDL_JoystickClose(joy2);
     if (joy1)
         SDL_JoystickClose(joy1); */
@@ -160,6 +171,7 @@ void openROM(char *filename)
     initCpu();
     initRIOT();
     initTIA();
+    initSound();
 
 #ifndef RELEASE
     _pf = _bl = _m0 = _m1 = 1;
@@ -209,7 +221,10 @@ void mainLoop()
     SDL_Event event;
     void *frameBuffer;
     int done = 0, pitch;
-    unsigned int t, tc, tf = 0;
+    unsigned int t, tc, tf = 0, t2;
+
+    if (audio_present)
+        SDL_PauseAudio(0);
 
     t = SDL_GetTicks();
     while (!done) {
@@ -219,7 +234,8 @@ void mainLoop()
                 done = 1;
         }
 
-//        printf("\n###### NEW FRAME ########\n\n");
+//        printf("###### NEW FRAME %2d ########\n", SDL_GetTicks() - t2);
+//        t2 = SDL_GetTicks();
         getControls();
         SDL_LockTexture(texture, NULL, &frameBuffer, &pitch);
         scanFrame(frameBuffer);
@@ -235,6 +251,9 @@ void mainLoop()
         else
             t = tc;
     }
+
+    if (audio_present)
+        SDL_PauseAudio(1);
 }
 
 int main(int argc, char **argv)

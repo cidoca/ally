@@ -1,6 +1,6 @@
 AR=ar
 ASM=nasm
-OBJECTS=data.o riot.o banks.o cpu.o tia.o frame.o
+OBJECTS=data.o riot.o banks.o cpu.o tia.o frame.o sound.o
 OBJECTS_TEST=data.o banks-test.o cpu.o
 
 all: libcore.a libcore-test.a

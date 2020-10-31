@@ -1,8 +1,8 @@
 seaquest
   Oxygen bar synchronization issues (PF/COLUPF)
 
-combat2
+combat2, opensesm
   Playfield synchronization
 
-opensesm
- Playfield issues
+riveraid
+  Bridge 1 pixel shifted left

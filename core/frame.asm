@@ -196,7 +196,7 @@ PFA:
     ; Player 1
     mov dl, [POSITION_P1]
     cmp [CLOCKCOUNTS], dl
-    jb P1X
+    jb P13X
     add dl, [SIZE_P1]
     cmp [CLOCKCOUNTS], dl
     jae P1X

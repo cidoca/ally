@@ -490,7 +490,7 @@ GLOBAL _FETCH_OPCODE
 _FETCH_OPCODE:
     __FETCH_NEXT_BYTE
     movzx eax, al
-    mov eax, [OPCODES+eax*4]
+    mov eax, [OPCODES+rax*4]
 
 %IFNDEF RELEASE
     push rdi
