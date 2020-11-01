@@ -71,6 +71,10 @@ SECTION .text
     test [GRP%1B], dl
     jz %%C
     or BYTE [COLLISION_MASK], %2
+%IFNDEF RELEASE
+    test BYTE [_p%1], 1
+    jz %%C
+%ENDIF
     mov eax, [COLOR_P%1]
 %%C:
 %ENDMACRO
@@ -412,9 +416,11 @@ GLOBAL COLLISION_MASK
 COLLISION_MASK  RESB 1
 
 %IFNDEF RELEASE
-GLOBAL _pf, _bl, _m0, _m1
-_pf  RESB 1
-_bl  RESB 1
+GLOBAL _p0, _p1, _m0, _m1, _pf, _bl
+_p0  RESB 1
+_p1  RESB 1
 _m0  RESB 1
 _m1  RESB 1
+_pf  RESB 1
+_bl  RESB 1
 %ENDIF

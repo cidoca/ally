@@ -174,7 +174,7 @@ void openROM(char *filename)
     initSound();
 
 #ifndef RELEASE
-    _pf = _bl = _m0 = _m1 = 1;
+    _p0 = _p1 = _pf = _bl = _m0 = _m1 = 1;
 #endif
 }
 
@@ -204,13 +204,14 @@ void getControls()
     if (keys[SDL_SCANCODE_TAB])
         PORTB &= ~0x02;
 
-    // Debug
 #ifndef RELEASE
-    static int f9 = 0, f10 = 0, f11 = 0, f12 = 0, wo = 0, wd = 1;
-    if (keys[SDL_SCANCODE_F9]) { if (!f9) { f9 = 1; _pf = !_pf; } } else f9 = 0;
-    if (keys[SDL_SCANCODE_F10]) { if (!f10) { f10 = 1; _bl = !_bl; } } else f10 = 0;
-    if (keys[SDL_SCANCODE_F11]) { if (!f11) { f11 = 1; _m0 = !_m0; } } else f11 = 0;
-    if (keys[SDL_SCANCODE_F12]) { if (!f12) { f12 = 1; _m1 = !_m1; } } else f12 = 0;
+    static int f7 = 0, f8 = 0, f9 = 0, f10 = 0, f11 = 0, f12 = 0, wo = 0, wd = 1;
+    if (keys[SDL_SCANCODE_F7]) { if (!f7) { f7 = 1; _p0 = !_p0; } } else f7 = 0;
+    if (keys[SDL_SCANCODE_F8]) { if (!f8) { f8 = 1; _p1 = !_p1; } } else f8 = 0;
+    if (keys[SDL_SCANCODE_F9]) { if (!f9) { f9 = 1; _m0 = !_m0; } } else f9 = 0;
+    if (keys[SDL_SCANCODE_F10]) { if (!f10) { f10 = 1; _m1 = !_m1; } } else f10 = 0;
+    if (keys[SDL_SCANCODE_F11]) { if (!f11) { f11 = 1; _pf = !_pf; } } else f11 = 0;
+    if (keys[SDL_SCANCODE_F12]) { if (!f12) { f12 = 1; _bl = !_bl; } } else f12 = 0;
     if (keys[SDL_SCANCODE_MINUS]) { if (wd) { wo = 1; wd = 0; SDL_SetWindowSize(win, 228, 320); } }
     if (keys[SDL_SCANCODE_EQUALS]) { if (wo) { wo = 0; wd = 1; SDL_SetWindowSize(win, 912, 640); } }
 #endif

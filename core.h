@@ -22,7 +22,7 @@ extern unsigned char CLOCKCOUNTS;
 extern unsigned char PORTA, PORTB, INPT4, INPT5;
 
 extern unsigned char TIA[], POSITION_P0, POSITION_P1, POSITION_M0, POSITION_M1, POSITION_BL;
-extern unsigned char _pf, _bl, _m0, _m1;
+extern unsigned char _p0, _p1, _pf, _bl, _m0, _m1;
 
 void setupBanks(int);
 void initCpu();
