@@ -111,7 +111,7 @@ _NUSIZ0:
     mov dl, [GRP_SIZES+rax]
     mov [SIZE_P0], dl
     mov al, [GRP_SPACES+rax]
-    mov [SPACES_P0], al
+    mov [SPACE_P0], al
     ret
 
 ; * 05
@@ -129,7 +129,7 @@ _NUSIZ1:
     mov dl, [GRP_SIZES+rax]
     mov [SIZE_P1], dl
     mov al, [GRP_SPACES+rax]
-    mov [SPACES_P1], al
+    mov [SPACE_P1], al
     ret
 
 ; * 06

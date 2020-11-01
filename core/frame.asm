@@ -24,6 +24,57 @@
 
 SECTION .text
 
+%MACRO __CHECK_POSITION 3
+    mov cl, 1
+    movzx r8d, BYTE [POSITION_%1]
+    movzx r9d, BYTE [CLOCKCOUNTS]
+    sub r9d, 160
+
+%%A:
+    cmp r9d, r8d
+    jl %%B
+    mov edx, r8d
+    add edx, [SIZE_%1]
+    cmp r9d, edx
+    jb %%C
+
+    inc cl
+    cmp [COPIES_%2], cl
+    jb %3
+    add r8d, [SPACE_%2]
+    jmp %%A
+
+%%B:
+    add r9d, 160
+    jmp %%A
+
+%%C:
+%ENDMACRO
+
+%MACRO __DRAW_PLAYER 2
+    mov cl, [SIZE_P%1]
+    shr cl, 4
+    sub edx, r9d
+    dec dl
+    shr dl, cl
+    mov cl, dl
+
+    test BYTE [TIA+REFP%1], REFP_BIT
+    jz %%A
+    mov dl, 80h
+    shr dl, cl
+    jmp %%B
+%%A:
+    mov dl, 1
+    shl dl, cl
+%%B:
+    test [GRP%1B], dl
+    jz %%C
+    or BYTE [COLLISION_MASK], %2
+    mov eax, [COLOR_P%1]
+%%C:
+%ENDMACRO
+
 ; * Draw Playfield
 ; ******************
 GLOBAL drawPlayfiled
@@ -157,239 +208,50 @@ drawClockCount:
     call drawPlayfiled
 PFA:
 
-%MACRO __DRAW_PLAYER_AUX 2
-    test BYTE [TIA+REFP%1], REFP_BIT
-    jz %%A
-    mov dl, 80h
-    shr dl, cl
-    jmp %%B
-%%A:
-    mov dl, 1
-    shl dl, cl
-%%B:
-    test [GRP%1B], dl
-    jz %%C
-    or BYTE [COLLISION_MASK], %2
-    mov eax, [COLOR_P%1]
-%%C:
-%ENDMACRO
-
-%MACRO __DRAW_PLAYER 2
-    mov cl, [SIZE_P%1]
-    shr cl, 4
-    sub dl, [CLOCKCOUNTS]
-    dec dl
-    shr dl, cl
-    mov cl, dl
-    __DRAW_PLAYER_AUX %1, %2
-%ENDMACRO
-
-%MACRO __DRAW_PLAYER_COPY 2
-    sub cl, [CLOCKCOUNTS]
-    dec cl
-    __DRAW_PLAYER_AUX %1, %2
-%ENDMACRO
-
+    ; Player 1
     test BYTE [GRP1B], 0FFh
     jz P13X
 
-    ; Player 1
-    mov dl, [POSITION_P1]
-    cmp [CLOCKCOUNTS], dl
-    jb P13X
-    add dl, [SIZE_P1]
-    cmp [CLOCKCOUNTS], dl
-    jae P1X
+    __CHECK_POSITION P1, P1, P13X
     __DRAW_PLAYER 1, 2 ; P1
-    jmp P13X
-P1X:
-
-    ; Player 1-2
-    cmp BYTE [COPIES_P1], 2
-    jb P13X
-    mov cl, [POSITION_P1]
-    add cl, [SPACES_P1]
-    cmp [CLOCKCOUNTS], cl
-    jb P12X
-    add cl, 8
-    cmp [CLOCKCOUNTS], cl
-    jae P12X
-    __DRAW_PLAYER_COPY 1, 2 ; P1
-    jmp P13X
-P12X:
-
-    ; Player 1-3
-    cmp BYTE [COPIES_P1], 3
-    jb P13X
-    mov cl, [POSITION_P1]
-    mov dl, [SPACES_P1]
-    add cl, dl
-    add cl, dl
-    cmp [CLOCKCOUNTS], cl
-    jb P13X
-    add cl, 8
-    cmp [CLOCKCOUNTS], cl
-    jae P13X
-    __DRAW_PLAYER_COPY 1, 2 ; P1
 P13X:
 
+    ; Missile 1
     test BYTE [TIA+ENAM1], ENA_BIT
     jz M1X
     test BYTE [TIA+RESMP1], RESMP_BIT
     jnz M1X
 
-    ; Missile 1
-    mov dl, [POSITION_M1]
-    cmp [CLOCKCOUNTS], dl
-    jb M1X0
-    add dl, [SIZE_M1]
-    cmp [CLOCKCOUNTS], dl
-    jae M1X0
+    __CHECK_POSITION M1, P1, M1X
     or BYTE [COLLISION_MASK], 8 ; M1
 %IFNDEF RELEASE
     test BYTE [_m1], 1
     jz M1X
 %ENDIF
     mov eax, [COLOR_P1]
-    jmp M1X
-
-M1X0:
-    cmp BYTE [COPIES_P1], 2
-    jb M1X
-    mov dl, [POSITION_M1]
-    add dl, [SPACES_P1]
-    cmp [CLOCKCOUNTS], dl
-    jb M1X1
-    add dl, [SIZE_M1]
-    cmp [CLOCKCOUNTS], dl
-    jae M1X1
-    or BYTE [COLLISION_MASK], 8 ; M1
-%IFNDEF RELEASE
-    test BYTE [_m1], 1
-    jz M1X
-%ENDIF
-    mov eax, [COLOR_P1]
-    jmp M1X
-
-M1X1:
-    cmp BYTE [COPIES_P1], 3
-    jb M1X
-    mov dl, [POSITION_M1]
-    add dl, [SPACES_P1]
-    add dl, [SPACES_P1]
-    cmp [CLOCKCOUNTS], dl
-    jb M1X
-    add dl, [SIZE_M1]
-    cmp [CLOCKCOUNTS], dl
-    jae M1X
-    or BYTE [COLLISION_MASK], 8 ; M1
-%IFNDEF RELEASE
-    test BYTE [_m1], 1
-    jz M1X
-%ENDIF
-    mov eax, [COLOR_P1]
-
 M1X:
 
+    ; Player 0
     test BYTE [GRP0B], 0FFh
     jz P03X
 
-    ; Player 0
-    mov dl, [POSITION_P0]
-    cmp [CLOCKCOUNTS], dl
-    jb P0X
-    add dl, [SIZE_P0]
-    cmp [CLOCKCOUNTS], dl
-    jae P0X
+    __CHECK_POSITION P0, P0, P03X
     __DRAW_PLAYER 0, 1 ; P0
-    jmp P03X
-P0X:
-
-    ; Player 0-2
-    cmp BYTE [COPIES_P0], 2
-    jb P03X
-    mov cl, [POSITION_P0]
-    add cl, [SPACES_P0]
-    cmp [CLOCKCOUNTS], cl
-    jb P02X
-    add cl, [SIZE_P0]
-    cmp [CLOCKCOUNTS], cl
-    jae P02X
-    __DRAW_PLAYER_COPY 0, 1 ; P0
-    jmp P03X
-P02X:
-
-    ; Player 0-3
-    cmp BYTE [COPIES_P0], 3
-    jb P03X
-    mov cl, [POSITION_P0]
-    mov dl, [SPACES_P0]
-    add cl, dl
-    add cl, dl
-    cmp [CLOCKCOUNTS], cl
-    jb P03X
-    add cl, [SIZE_P0]
-    cmp [CLOCKCOUNTS], cl
-    jae P03X
-    __DRAW_PLAYER_COPY 0, 1 ; P0
 P03X:
 
+    ; Missile 0
     test BYTE [TIA+ENAM0], ENA_BIT
     jz M0X
     test BYTE [TIA+RESMP0], RESMP_BIT
     jnz M0X
 
-    ; Missile 0
-    mov dl, [POSITION_M0]
-    cmp [CLOCKCOUNTS], dl
-    jb M0X0
-    add dl, [SIZE_M0]
-    cmp [CLOCKCOUNTS], dl
-    jae M0X0
+    __CHECK_POSITION M0, P0, M0X
     or BYTE [COLLISION_MASK], 4 ; M0
 %IFNDEF RELEASE
     test BYTE [_m0], 1
     jz M0X
 %ENDIF
     mov eax, [COLOR_P0]
-    jmp M0X
-
-M0X0:
-    cmp BYTE [COPIES_P0], 2
-    jb M0X
-    mov dl, [POSITION_M0]
-    add dl, [SPACES_P0]
-    cmp [CLOCKCOUNTS], dl
-    jb M0X1
-    add dl, [SIZE_M0]
-    cmp [CLOCKCOUNTS], dl
-    jae M0X1
-    or BYTE [COLLISION_MASK], 4 ; M0
-%IFNDEF RELEASE
-    test BYTE [_m0], 1
-    jz M0X
-%ENDIF
-    mov eax, [COLOR_P0]
-    jmp M0X
-
-M0X1:
-    cmp BYTE [COPIES_P0], 3
-    jb M0X
-    mov dl, [POSITION_M0]
-    add dl, [SPACES_P0]
-    add dl, [SPACES_P0]
-    cmp [CLOCKCOUNTS], dl
-    jb M0X
-    add dl, [SIZE_M0]
-    cmp [CLOCKCOUNTS], dl
-    jae M0X
-    or BYTE [COLLISION_MASK], 4 ; M0
-%IFNDEF RELEASE
-    test BYTE [_m0], 1
-    jz M0X
-%ENDIF
-    mov eax, [COLOR_P0]
-
 M0X:
 
     test BYTE [TIA+CTRLPF], CTRLPF_PFP
@@ -516,29 +378,29 @@ COLOR_BK    RESD 1
 ;GLOBAL PRE_COLOR_PF
 ;PRE_COLOR_PF RESD 1
 
-GLOBAL POSITION_P0, GRP0A, GRP0B, COPIES_P0, SIZE_P0, SPACES_P0
+GLOBAL POSITION_P0, GRP0A, GRP0B, COPIES_P0, SIZE_P0, SPACE_P0
 GRP0A       RESB 1
 GRP0B       RESB 1
 POSITION_P0 RESB 1
 COPIES_P0   RESB 1
-SIZE_P0     RESB 1
-SPACES_P0   RESB 1
+SIZE_P0     RESD 1
+SPACE_P0    RESD 1
 
-GLOBAL POSITION_P1, GRP1A, GRP1B, COPIES_P1, SIZE_P1, SPACES_P1
+GLOBAL POSITION_P1, GRP1A, GRP1B, COPIES_P1, SIZE_P1, SPACE_P1
 GRP1A       RESB 1
 GRP1B       RESB 1
 POSITION_P1 RESB 1
 COPIES_P1   RESB 1
-SIZE_P1     RESB 1
-SPACES_P1   RESB 1
+SIZE_P1     RESD 1
+SPACE_P1    RESD 1
 
 GLOBAL POSITION_M0, SIZE_M0
 POSITION_M0 RESB 1
-SIZE_M0     RESB 1
+SIZE_M0     RESD 1
 
 GLOBAL POSITION_M1, SIZE_M1
 POSITION_M1 RESB 1
-SIZE_M1     RESB 1
+SIZE_M1     RESD 1
 
 GLOBAL POSITION_BL, SIZE_BL, ENABLE_BLA, ENABLE_BLB
 POSITION_BL RESB 1

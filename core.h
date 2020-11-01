@@ -33,4 +33,4 @@ void initTIA();
 void scanFrame(void *);
 
 void initSound();
-void fillSoundBuffer(void *userdata, Uint8 *stream, int len);
+void fillSoundBuffer(void *userdata, unsigned char *stream, int len);

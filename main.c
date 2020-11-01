@@ -57,6 +57,7 @@ char *TIA_NAME[64] = { "VSYNC", "VBLANK", "WSYNC", "RSYNC", "NUSIZ0", "NUSIZ1",
                        "VDELBL", "RESMP0", "RESMP1", "HMOVE", "HMCLR", "CXCLR" };
 void writingInvalidTIA(int address, int value) {
 //    return;
+//    if (SCANLINE != 165) return;
     if (0
 //        || 1
 //        || address == 0x00
@@ -71,7 +72,6 @@ void writingInvalidTIA(int address, int value) {
 //        || address == 0x2B
 //        || (address >= 0x15 && address <= 0x1A)   // Sound
     )
-//    if (SCANLINE != 209) return;
     printf("#### Writing TIA: %6s <- %02X                                    S/C: %3d/%3d  P: %3d/%3d  M: %3d/%3d B: %d\n",
             address <= 0x2C ? TIA_NAME[address] : "???", value & 0xff,
             SCANLINE, CLOCKCOUNTS, POSITION_P0, POSITION_P1, POSITION_M0, POSITION_M1, POSITION_BL);
