@@ -543,7 +543,41 @@ _BRANCH2:
 ; ***************************
 GLOBAL _BRK
 _BRK:
-    ; TODO
+    inc DWORD [programCounter]
+    __NEXT_CYCLE _BRK2
+_BRK2:
+    mov al, [rS]
+    mov [ADL], al
+    mov BYTE [ADH], 1
+    mov al, [PCH]
+    mov esi, [ADDRESS]
+    call writeMemory
+    dec BYTE [rS]
+    dec DWORD [ADDRESS]
+    __NEXT_CYCLE _BRK3
+_BRK3:
+    mov al, [PCL]
+    mov esi, [ADDRESS]
+    call writeMemory
+    dec BYTE [rS]
+    dec DWORD [ADDRESS]
+    __NEXT_CYCLE _BRK4
+_BRK4:
+    call saveFlags
+    mov esi, [ADDRESS]
+    call writeMemory
+    dec BYTE [rS]
+    __NEXT_CYCLE _BRK5
+_BRK5:
+    mov esi, 0FFFEh
+    call readMemory
+    mov [PCL], al
+    __NEXT_CYCLE _BRK6
+_BRK6:
+    mov esi, 0FFFFh
+    call readMemory
+    mov [PCH], al
+    __NEXT_CYCLE_FECTH_OPCODE
 
 ; ORA - 01/05/09/0D/11/15/19/AD - N Z
 ;  ************************************
@@ -693,7 +727,33 @@ _SEC:
 ; *********************
 GLOBAL _RTI
 _RTI:
-    ; TODO
+    __NEXT_CYCLE _RTI2
+_RTI2:
+    mov al, [rS]
+    mov [ADL], al
+    mov BYTE [ADH], 1
+    __NEXT_CYCLE _RTI3
+_RTI3:
+    inc BYTE [rS]
+    inc DWORD [ADDRESS]
+    mov esi, [ADDRESS]
+    call readMemory
+    call loadFlags
+    __NEXT_CYCLE _RTI4
+_RTI4:
+    inc BYTE [rS]
+    inc DWORD [ADDRESS]
+    mov esi, [ADDRESS]
+    call readMemory
+    mov [PCL], al
+    __NEXT_CYCLE _RTI5
+_RTI5:
+    inc BYTE [rS]
+    inc DWORD [ADDRESS]
+    mov esi, [ADDRESS]
+    call readMemory
+    mov [PCH], al
+    __NEXT_CYCLE_FECTH_OPCODE
 
 ; EOR - 41/45/49/4D/51/55/59/5D - N Z
 ; *************************************
@@ -1139,7 +1199,7 @@ SECTION .data
 GLOBAL OPCODES
 OPCODES:
     ;   0/8             1/9             2/A             3/B             4/C             5/D             6/E             7/F
-    DD _NIMP,          _ORA + __INDX,  _NIMP,          _NIMP,          _NIMP,          _ORA + __ZP,    _ASL + __ZP2,   _NIMP
+    DD _BRK,           _ORA + __INDX,  _NIMP,          _NIMP,          _NIMP,          _ORA + __ZP,    _ASL + __ZP2,   _NIMP
     DD _PHP,           _ORA + __IMM,   _ASLRA,         _NIMP,          _NIMP,          _ORA + __ABS,   _ASL + __ABS2,  _NIMP    ; 0
     DD _BPL,           _ORA + __INDY,  _NIMP,          _NIMP,          _NIMP,          _ORA + __ZPX,   _ASL + __ZPX2,  _NIMP
     DD _CLC,           _ORA + __ABSY,  _NIMP,          _NIMP,          _NIMP,          _ORA + __ABSX,  _ASL + __ABSX2, _NIMP    ; 1
@@ -1149,7 +1209,7 @@ OPCODES:
     DD _BMI,           _AND + __INDY,  _NIMP,          _NIMP,          _NIMP,          _AND + __ZPX,   _ROL + __ZPX2,  _NIMP
     DD _SEC,           _AND + __ABSY,  _NIMP,          _NIMP,          _NIMP,          _AND + __ABSX,  _ROL + __ABSX2, _NIMP    ; 3
 
-    DD _NIMP,          _EOR + __INDX,  _NIMP,          _NIMP,          _NIMP,          _EOR + __ZP,    _LSR + __ZP2,   _NIMP
+    DD _RTI,           _EOR + __INDX,  _NIMP,          _NIMP,          _NIMP,          _EOR + __ZP,    _LSR + __ZP2,   _NIMP
     DD _PHA,           _EOR + __IMM,   _LSRRA,         _NIMP,          _JMPA,          _EOR + __ABS,   _LSR + __ABS2,  _NIMP    ; 4
     DD _BVC,           _EOR + __INDY,  _NIMP,          _NIMP,          _NIMP,          _EOR + __ZPX,   _LSR + __ZPX2,  _NIMP
     DD _CLI,           _EOR + __ABSY,  _NIMP,          _NIMP,          _NIMP,          _EOR + __ABSX,  _LSR + __ABSX2, _NIMP    ; 5

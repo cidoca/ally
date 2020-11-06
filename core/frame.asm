@@ -137,15 +137,15 @@ GLOBAL scanFrame, NCC, NTC
 scanFrame:
 %IFNDEF RELEASE
     mov eax, 0FF00h
-    mov ecx, 228 * 320
+    mov ecx, 160 * 320
     push rdi
     rep stosd
     pop rdi
 %ENDIF
 
-    movzx eax, BYTE [CLOCKCOUNTS]
-    shl eax, 2
-    add rdi, rax
+;    movzx eax, BYTE [CLOCKCOUNTS]
+;    shl eax, 2
+;    add rdi, rax
 
     mov BYTE [TIA+VSYNC], 0
     mov DWORD [SCANLINE], 0
@@ -155,7 +155,8 @@ newLine:
 pulseTIA:
     test BYTE [TIA+VSYNC], VSYNC_BIT        ; New frame
     jnz endFrame
-    jmp drawClockCount
+    cmp BYTE [CLOCKCOUNTS], 68
+    jae drawClockCount
 CNT:    
 
     dec BYTE [CLOCKO2]
@@ -191,10 +192,8 @@ endFrame:
     ret
 
 drawClockCount:
-    mov eax, [COLOR_BK]                 ; Background color
-    
-    cmp BYTE [CLOCKCOUNTS], 68
-    jb DBG1
+    ; Background color
+    mov eax, [COLOR_BK]
 
     ; Clear internal collision flags
     mov BYTE [COLLISION_MASK], 0
@@ -267,8 +266,6 @@ PFB:
     mov rdx, [COLLISION_TABLE+rdx*8]
     or [COLLISION], rdx
 
-DBG1:
-
 %IFNDEF RELEASE
     test BYTE [TIA+VBLANK], VBLANK_VERTBLANK
     jnz PURPLE
@@ -303,7 +300,6 @@ PURPLE:
 DBG2:
     mov [rdi], eax
     add rdi, 4
-
 
     jmp CNT
 

@@ -1,5 +1,6 @@
 TARGET=ally
 OBJECTS=main.o d6502.o
+#OBJECTS=main.o
 COREDIR=core
 LIBCORE=$(COREDIR)/libcore.a
 LIBCORE_TEST=$(COREDIR)/libcore-test.a

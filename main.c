@@ -56,10 +56,10 @@ char *TIA_NAME[64] = { "VSYNC", "VBLANK", "WSYNC", "RSYNC", "NUSIZ0", "NUSIZ1",
                        "HMP0", "HMP1", "HMM0", "HMM1", "HMBL", "VDELP0", "VDELP1",
                        "VDELBL", "RESMP0", "RESMP1", "HMOVE", "HMCLR", "CXCLR" };
 void writingInvalidTIA(int address, int value) {
-//    return;
-//    if (SCANLINE != 165) return;
+    return;
+    if (SCANLINE != 210) return;
     if (0
-//        || 1
+        || 1
 //        || address == 0x00
 //        || address == 0x01
 //        || address == 0x03
@@ -108,11 +108,12 @@ void initSDL(char *filename)
 
     // Create window and texture
     snprintf(title, FILENAME_MAX, "Ally - %s", filename);
-    win = SDL_CreateWindow(title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 912, 640, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
+
+    win = SDL_CreateWindow(title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 640, 640, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
     //win = SDL_CreateWindow(title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 228, 320, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
     renderer = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED);
     //SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1");
-    texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, 228, 320); // 160, 192);
+    texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, 160, 320); // 160, 192);
 
     // Setup keyboard and joysticks
     keys = (Uint8*)SDL_GetKeyboardState(NULL);
@@ -212,8 +213,8 @@ void getControls()
     if (keys[SDL_SCANCODE_F10]) { if (!f10) { f10 = 1; _m1 = !_m1; } } else f10 = 0;
     if (keys[SDL_SCANCODE_F11]) { if (!f11) { f11 = 1; _pf = !_pf; } } else f11 = 0;
     if (keys[SDL_SCANCODE_F12]) { if (!f12) { f12 = 1; _bl = !_bl; } } else f12 = 0;
-    if (keys[SDL_SCANCODE_MINUS]) { if (wd) { wo = 1; wd = 0; SDL_SetWindowSize(win, 228, 320); } }
-    if (keys[SDL_SCANCODE_EQUALS]) { if (wo) { wo = 0; wd = 1; SDL_SetWindowSize(win, 912, 640); } }
+    if (keys[SDL_SCANCODE_MINUS]) { if (wd) { wo = 1; wd = 0; SDL_SetWindowSize(win, 160, 320); } }
+    if (keys[SDL_SCANCODE_EQUALS]) { if (wo) { wo = 0; wd = 1; SDL_SetWindowSize(win, 640, 640); } }
 #endif
 }
 
@@ -223,6 +224,7 @@ void mainLoop()
     void *frameBuffer;
     int done = 0, pitch;
     unsigned int t, tc, tf = 0, t2;
+//    SDL_Rect rect_clipped = {68, 0, 160, 320};
 
     if (audio_present)
         SDL_PauseAudio(0);
@@ -241,7 +243,11 @@ void mainLoop()
         SDL_LockTexture(texture, NULL, &frameBuffer, &pitch);
         scanFrame(frameBuffer);
         SDL_UnlockTexture(texture);
+//#ifndef RELEASE
         SDL_RenderCopy(renderer, texture, NULL, NULL);
+//#else
+//        SDL_RenderCopy(renderer, texture, &rect_clipped, NULL);
+//#endif
         SDL_RenderPresent(renderer);
 
 //        SDL_Delay(200);
